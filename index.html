@@ -12,6 +12,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
 <style>
   :root {
     --pink: #e0447c;
@@ -226,6 +227,8 @@
   }
   .btn-add:active { background: var(--teal); color: #fff; }
   .btn-print { background: var(--pink); color: #fff; box-shadow: 0 4px 14px rgba(224,68,124,.35); }
+  .btn-img { background: var(--yellow); color: #fff; box-shadow: 0 4px 14px rgba(245,166,35,.35); }
+  .btn-img:disabled { opacity: .6; }
   .btn-wa { background: #25d366; color: #fff; }
   .btn-new { background: #fff; color: var(--ink-soft); border: 2px solid var(--line); min-height: 44px; padding: 8px 14px; font-size: 14px; }
 
@@ -251,7 +254,7 @@
   .dock .total-line .lbl { font-size: 13px; font-weight: 800; color: var(--ink-soft); letter-spacing: 1px; }
   .dock .total-line .val { font-family: 'Baloo 2', cursive; font-size: 26px; font-weight: 800; color: var(--teal); }
   .dock .btns { display: flex; gap: 10px; }
-  .dock .btn { flex: 1; }
+  .dock .btn { flex: 1; padding: 14px 6px; font-size: 15px; }
 
   /* ===== INVOICE ===== */
   .invoice {
@@ -549,7 +552,8 @@
     <span class="val" id="dockTotal">₦0</span>
   </div>
   <div class="btns">
-    <button class="btn btn-print" id="printBtn">🖨️ Save PDF</button>
+    <button class="btn btn-print" id="printBtn">🖨️ PDF</button>
+    <button class="btn btn-img" id="imgBtn">🖼️ Image</button>
     <button class="btn btn-wa" id="waBtn">📲 WhatsApp</button>
   </div>
 </div>
@@ -565,7 +569,7 @@ const ITEM_TYPES = [
   'Water Bottle', 'Backpack', 'Snackbox', 'Snackpack',
   'Girls Dress', 'Boys Dress', 'Shoes', 'Inner Wear', 'Other…'
 ];
-const QUICK_PRICES = [22000, 27000];
+const QUICK_PRICES = [14000, 16000, 18000, 25000, 29000];
 
 const fmt = n => '₦' + Number(n || 0).toLocaleString('en-NG');
 
@@ -771,6 +775,44 @@ function escapeHtml(s) {
 
 document.getElementById('addItem').addEventListener('click', () => addItemRow());
 document.getElementById('printBtn').addEventListener('click', () => window.print());
+
+/* ===== save invoice as picture (share sheet on iPhone → Save Image) ===== */
+document.getElementById('imgBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('imgBtn');
+  if (typeof html2canvas === 'undefined') {
+    alert('Image tool is still loading — try again in a second.');
+    return;
+  }
+  btn.disabled = true;
+  btn.textContent = '⏳ Making…';
+  try {
+    const canvas = await html2canvas(document.getElementById('invoice'), {
+      scale: 3,
+      backgroundColor: '#ffffff',
+      useCORS: true
+    });
+    const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+    const file = new File([blob], `FaasKids-${invoiceNo}.png`, { type: 'image/png' });
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      try {
+        await navigator.share({ files: [file], title: `FaasKids Invoice ${invoiceNo}` });
+        return;
+      } catch (e) {
+        if (e.name === 'AbortError') return; // user closed the share sheet
+      }
+    }
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = `FaasKids-${invoiceNo}.png`;
+    a.click();
+    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+  } catch (e) {
+    alert('Could not create the image: ' + e.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🖼️ Image';
+  }
+});
 
 document.getElementById('waBtn').addEventListener('click', () => {
   const { items, delivery, discount, subtotal, total } = totals();
