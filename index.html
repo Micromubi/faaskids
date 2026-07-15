@@ -2,9 +2,13 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>FaasKids — Invoice Generator</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#fdf6ef">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<title>FaasKids — Invoice</title>
 <link rel="icon" type="image/jpeg" href="logo.jpg">
+<link rel="apple-touch-icon" href="logo.jpg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
@@ -22,21 +26,24 @@
     --ink: #43384a;
     --ink-soft: #8a7f91;
     --line: #f0e4da;
-    --radius: 16px;
+    --radius: 18px;
   }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html { -webkit-text-size-adjust: 100%; }
   body {
     font-family: 'Nunito', sans-serif;
     background: var(--cream);
     color: var(--ink);
     min-height: 100vh;
+    padding-bottom: calc(96px + env(safe-area-inset-bottom));
   }
   h1, h2, h3, .brand { font-family: 'Baloo 2', cursive; }
 
   .topbar {
     background: var(--card);
     border-bottom: 3px solid var(--pink-soft);
-    padding: 10px 20px;
+    padding: 10px 16px;
+    padding-top: calc(10px + env(safe-area-inset-top));
     display: flex;
     align-items: center;
     gap: 12px;
@@ -44,33 +51,40 @@
     top: 0;
     z-index: 10;
   }
-  .topbar img { width: 44px; height: 44px; border-radius: 50%; }
-  .topbar .brand { font-size: 22px; font-weight: 800; }
+  .topbar img { width: 46px; height: 46px; border-radius: 50%; }
+  .topbar .brand { font-size: 23px; font-weight: 800; }
   .brand .b1 { color: var(--yellow); }
   .brand .b2 { color: var(--pink); }
   .topbar .tag { font-size: 12px; color: var(--teal); font-weight: 700; margin-top: -6px; }
+  .topbar .lock {
+    margin-left: auto;
+    border: 2px solid var(--line);
+    background: #fff;
+    color: var(--ink-soft);
+    border-radius: 12px;
+    padding: 8px 12px;
+    font-weight: 800;
+    font-size: 13px;
+    cursor: pointer;
+  }
 
   .wrap {
-    max-width: 1200px;
+    max-width: 560px;
     margin: 0 auto;
-    padding: 20px;
-    display: grid;
-    grid-template-columns: minmax(340px, 460px) 1fr;
-    gap: 20px;
-    align-items: start;
-  }
-  @media (max-width: 900px) {
-    .wrap { grid-template-columns: 1fr; }
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
   }
 
   .panel {
     background: var(--card);
     border-radius: var(--radius);
-    padding: 20px;
+    padding: 18px;
     box-shadow: 0 4px 20px rgba(224, 68, 124, 0.07);
   }
   .panel h2 {
-    font-size: 18px;
+    font-size: 19px;
     color: var(--pink);
     margin-bottom: 12px;
     display: flex;
@@ -78,112 +92,128 @@
     gap: 8px;
   }
   .section { margin-bottom: 22px; }
+  .section:last-child { margin-bottom: 0; }
 
-  label { font-size: 13px; font-weight: 800; color: var(--ink-soft); display: block; margin-bottom: 4px; }
+  label { font-size: 13px; font-weight: 800; color: var(--ink-soft); display: block; margin-bottom: 5px; }
   input[type=text], input[type=tel], input[type=number], select, textarea {
     width: 100%;
-    padding: 10px 12px;
+    min-height: 50px;
+    padding: 12px 14px;
     border: 2px solid var(--line);
-    border-radius: 10px;
+    border-radius: 13px;
     font-family: 'Nunito', sans-serif;
-    font-size: 15px;
-    font-weight: 600;
+    font-size: 16px;
+    font-weight: 700;
     color: var(--ink);
     background: #fff;
     outline: none;
     transition: border-color .15s;
+    appearance: none;
+    -webkit-appearance: none;
+  }
+  select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9'%3E%3Cpath d='M1 1l6 6 6-6' stroke='%238a7f91' stroke-width='2.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 14px center;
+    padding-right: 38px;
   }
   input:focus, select:focus, textarea:focus { border-color: var(--teal); }
   .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .field { margin-bottom: 10px; }
+  .field { margin-bottom: 12px; }
 
   /* line items */
   .item-card {
     border: 2px solid var(--line);
-    border-radius: 14px;
-    padding: 12px;
-    margin-bottom: 12px;
+    border-radius: 16px;
+    padding: 14px;
+    margin-bottom: 14px;
     background: #fffdfb;
     position: relative;
   }
   .item-card .remove {
     position: absolute;
-    top: 8px;
-    right: 8px;
+    top: 10px;
+    right: 10px;
     border: none;
     background: var(--pink-soft);
     color: var(--pink);
-    width: 26px; height: 26px;
+    width: 34px; height: 34px;
     border-radius: 50%;
     font-weight: 800;
     cursor: pointer;
-    font-size: 14px;
+    font-size: 15px;
     line-height: 1;
   }
-  .item-card .remove:hover { background: var(--pink); color: #fff; }
+  .item-card .remove:active { background: var(--pink); color: #fff; }
+  .item-card > label:first-of-type { padding-right: 40px; }
 
-  .qty-price { display: grid; grid-template-columns: 110px 1fr; gap: 10px; margin-top: 8px; }
+  .qty-price { display: grid; grid-template-columns: 132px 1fr; gap: 10px; margin-top: 10px; }
   .qty {
     display: flex; align-items: stretch;
     border: 2px solid var(--line);
-    border-radius: 10px;
+    border-radius: 13px;
     overflow: hidden;
     background: #fff;
+    min-height: 50px;
   }
   .qty button {
-    width: 32px;
+    width: 42px;
     border: none;
     background: var(--teal-soft);
     color: var(--teal);
-    font-size: 18px;
+    font-size: 22px;
     font-weight: 800;
     cursor: pointer;
   }
-  .qty button:hover { background: var(--teal); color: #fff; }
+  .qty button:active { background: var(--teal); color: #fff; }
   .qty input {
     width: 100%;
+    min-height: 0;
     border: none;
+    border-radius: 0;
     text-align: center;
-    font-size: 15px;
+    font-size: 17px;
     font-weight: 800;
     color: var(--ink);
     outline: none;
     -moz-appearance: textfield;
+    padding: 0;
   }
   .qty input::-webkit-outer-spin-button, .qty input::-webkit-inner-spin-button { -webkit-appearance: none; }
 
   .price-box .naira-input { position: relative; }
   .price-box .naira-input span {
-    position: absolute; left: 12px; top: 50%; transform: translateY(-50%);
-    font-weight: 800; color: var(--ink-soft); font-size: 15px;
+    position: absolute; left: 14px; top: 50%; transform: translateY(-50%);
+    font-weight: 800; color: var(--ink-soft); font-size: 16px;
   }
-  .price-box input { padding-left: 30px; }
+  .price-box input { padding-left: 32px; }
 
-  .chips { display: flex; gap: 8px; margin-top: 8px; flex-wrap: wrap; }
+  .chips { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
   .chip {
     border: 2px solid var(--yellow);
     background: var(--yellow-soft);
     color: #b47410;
     font-family: 'Nunito', sans-serif;
     font-weight: 800;
-    font-size: 13px;
-    padding: 6px 14px;
+    font-size: 15px;
+    padding: 10px 18px;
     border-radius: 999px;
     cursor: pointer;
     transition: all .15s;
   }
-  .chip:hover, .chip.active { background: var(--yellow); color: #fff; }
+  .chip:active, .chip.active { background: var(--yellow); color: #fff; }
 
-  .custom-name { margin-top: 8px; display: none; }
+  .custom-name { margin-top: 10px; display: none; }
   .custom-name.show { display: block; }
 
   .btn {
     font-family: 'Baloo 2', cursive;
     font-weight: 700;
-    font-size: 15px;
+    font-size: 16px;
     border: none;
-    border-radius: 12px;
-    padding: 12px 18px;
+    border-radius: 14px;
+    padding: 14px 18px;
+    min-height: 52px;
     cursor: pointer;
     transition: transform .1s, box-shadow .15s;
   }
@@ -194,15 +224,34 @@
     color: var(--teal);
     border: 2px dashed var(--teal);
   }
-  .btn-add:hover { background: var(--teal); color: #fff; }
+  .btn-add:active { background: var(--teal); color: #fff; }
   .btn-print { background: var(--pink); color: #fff; box-shadow: 0 4px 14px rgba(224,68,124,.35); }
-  .btn-print:hover { background: var(--pink-dark); }
   .btn-wa { background: #25d366; color: #fff; }
-  .btn-wa:hover { background: #1eb457; }
-  .btn-new { background: #fff; color: var(--ink-soft); border: 2px solid var(--line); }
-  .btn-new:hover { border-color: var(--ink-soft); }
-  .actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 6px; }
-  .actions .btn { flex: 1; min-width: 130px; }
+  .btn-new { background: #fff; color: var(--ink-soft); border: 2px solid var(--line); min-height: 44px; padding: 8px 14px; font-size: 14px; }
+
+  /* sticky bottom action bar */
+  .dock {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    background: var(--card);
+    border-top: 3px solid var(--pink-soft);
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+    z-index: 20;
+    max-width: 560px;
+    margin: 0 auto;
+    border-radius: 20px 20px 0 0;
+    box-shadow: 0 -6px 24px rgba(67,56,74,.10);
+  }
+  .dock .total-line {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    margin-bottom: 8px;
+  }
+  .dock .total-line .lbl { font-size: 13px; font-weight: 800; color: var(--ink-soft); letter-spacing: 1px; }
+  .dock .total-line .val { font-family: 'Baloo 2', cursive; font-size: 26px; font-weight: 800; color: var(--teal); }
+  .dock .btns { display: flex; gap: 10px; }
+  .dock .btn { flex: 1; }
 
   /* ===== INVOICE ===== */
   .invoice {
@@ -213,60 +262,60 @@
   }
   .inv-head {
     background: linear-gradient(135deg, var(--pink-soft) 0%, var(--yellow-soft) 60%, var(--teal-soft) 100%);
-    padding: 26px 30px;
+    padding: 20px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    gap: 16px;
+    gap: 12px;
     flex-wrap: wrap;
   }
-  .inv-brand { display: flex; align-items: center; gap: 14px; }
-  .inv-brand img { width: 68px; height: 68px; border-radius: 50%; box-shadow: 0 3px 10px rgba(0,0,0,.12); }
-  .inv-brand .name { font-family: 'Baloo 2', cursive; font-size: 30px; font-weight: 800; line-height: 1; }
-  .inv-brand .slogan { color: var(--teal); font-weight: 800; font-size: 13px; letter-spacing: 1px; }
-  .inv-brand .contact { color: var(--ink-soft); font-weight: 700; font-size: 12.5px; margin-top: 3px; }
+  .inv-brand { display: flex; align-items: center; gap: 12px; }
+  .inv-brand img { width: 58px; height: 58px; border-radius: 50%; box-shadow: 0 3px 10px rgba(0,0,0,.12); }
+  .inv-brand .name { font-family: 'Baloo 2', cursive; font-size: 26px; font-weight: 800; line-height: 1; }
+  .inv-brand .slogan { color: var(--teal); font-weight: 800; font-size: 12px; letter-spacing: 1px; }
+  .inv-brand .contact { color: var(--ink-soft); font-weight: 700; font-size: 12px; margin-top: 3px; }
   .inv-meta { text-align: right; }
   .inv-meta .title {
     font-family: 'Baloo 2', cursive;
-    font-size: 26px;
+    font-size: 22px;
     font-weight: 800;
     color: var(--pink);
     letter-spacing: 2px;
   }
-  .inv-meta div { font-size: 13.5px; font-weight: 700; color: var(--ink); }
+  .inv-meta div { font-size: 13px; font-weight: 700; color: var(--ink); }
   .inv-meta .muted { color: var(--ink-soft); }
 
-  .inv-body { padding: 24px 30px 30px; }
-  .inv-to { margin-bottom: 18px; }
+  .inv-body { padding: 18px 16px 22px; }
+  .inv-to { margin-bottom: 16px; }
   .inv-to .lbl { font-size: 11px; font-weight: 800; letter-spacing: 1.5px; color: var(--teal); text-transform: uppercase; }
-  .inv-to .who { font-size: 19px; font-weight: 800; font-family: 'Baloo 2', cursive; }
-  .inv-to .phone { font-size: 13.5px; color: var(--ink-soft); font-weight: 700; }
+  .inv-to .who { font-size: 18px; font-weight: 800; font-family: 'Baloo 2', cursive; }
+  .inv-to .phone { font-size: 13px; color: var(--ink-soft); font-weight: 700; }
 
   table.inv-table { width: 100%; border-collapse: collapse; }
   .inv-table th {
     text-align: left;
-    font-size: 11px;
-    letter-spacing: 1.2px;
+    font-size: 10.5px;
+    letter-spacing: 1px;
     text-transform: uppercase;
     color: #fff;
     background: var(--pink);
-    padding: 10px 12px;
+    padding: 10px;
   }
   .inv-table th:first-child { border-radius: 10px 0 0 10px; }
   .inv-table th:last-child { border-radius: 0 10px 10px 0; text-align: right; }
   .inv-table th.num, .inv-table td.num { text-align: right; }
   .inv-table th.ctr, .inv-table td.ctr { text-align: center; }
-  .inv-table td { padding: 12px; font-size: 14.5px; font-weight: 700; border-bottom: 2px solid var(--line); }
+  .inv-table td { padding: 11px 10px; font-size: 14px; font-weight: 700; border-bottom: 2px solid var(--line); }
   .inv-table tr:last-child td { border-bottom: none; }
   .inv-table td .item-name { font-weight: 800; }
 
-  .inv-totals { margin-top: 14px; display: flex; justify-content: flex-end; }
-  .inv-totals table { min-width: 260px; }
-  .inv-totals td { padding: 6px 12px; font-size: 14.5px; font-weight: 700; }
+  .inv-totals { margin-top: 12px; display: flex; justify-content: flex-end; }
+  .inv-totals table { min-width: 230px; }
+  .inv-totals td { padding: 6px 10px; font-size: 14px; font-weight: 700; }
   .inv-totals td.num { text-align: right; }
   .inv-totals .grand td {
     font-family: 'Baloo 2', cursive;
-    font-size: 20px;
+    font-size: 19px;
     font-weight: 800;
     color: #fff;
     background: var(--teal);
@@ -275,34 +324,109 @@
   .inv-totals .grand td:first-child { border-radius: 10px 0 0 10px; }
   .inv-totals .grand td:last-child { border-radius: 0 10px 10px 0; }
 
-  .inv-notes { margin-top: 22px; padding: 14px 16px; background: var(--yellow-soft); border-radius: 12px; }
+  .inv-pay { margin-top: 18px; padding: 14px 16px; background: var(--teal-soft); border-radius: 14px; }
+  .inv-pay .lbl { font-size: 11px; font-weight: 800; letter-spacing: 1.5px; color: var(--teal); text-transform: uppercase; margin-bottom: 6px; }
+  .inv-pay .row { font-size: 14px; font-weight: 700; display: flex; justify-content: space-between; gap: 10px; padding: 2px 0; }
+  .inv-pay .row b { font-weight: 800; text-align: right; }
+  .inv-pay .acct { font-family: 'Baloo 2', cursive; font-size: 18px; letter-spacing: 1px; color: var(--pink-dark); }
+
+  .inv-notes { margin-top: 12px; padding: 12px 16px; background: var(--yellow-soft); border-radius: 14px; }
   .inv-notes .lbl { font-size: 11px; font-weight: 800; letter-spacing: 1.5px; color: #b47410; text-transform: uppercase; margin-bottom: 4px; }
-  .inv-notes div { font-size: 13.5px; font-weight: 700; white-space: pre-line; }
+  .inv-notes div { font-size: 13px; font-weight: 700; white-space: pre-line; }
 
   .inv-foot {
-    margin-top: 26px;
+    margin-top: 22px;
     text-align: center;
     font-family: 'Baloo 2', cursive;
     font-weight: 700;
     color: var(--pink);
-    font-size: 16px;
+    font-size: 15px;
   }
-  .inv-foot .sub { font-family: 'Nunito', sans-serif; font-size: 12px; color: var(--ink-soft); font-weight: 700; }
+  .inv-foot .sub { font-family: 'Nunito', sans-serif; font-size: 11.5px; color: var(--ink-soft); font-weight: 700; }
 
-  .empty-hint { text-align: center; color: var(--ink-soft); font-weight: 700; padding: 30px 10px; font-size: 14px; }
+  .empty-hint { text-align: center; color: var(--ink-soft); font-weight: 700; padding: 26px 10px; font-size: 14px; }
+
+  /* ===== PIN LOCK ===== */
+  .lockscreen {
+    position: fixed;
+    inset: 0;
+    background: var(--cream);
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 24px;
+  }
+  .lockscreen.hidden { display: none; }
+  .lockscreen img { width: 96px; height: 96px; border-radius: 50%; box-shadow: 0 6px 24px rgba(224,68,124,.25); margin-bottom: 6px; }
+  .lockscreen .brand { font-size: 30px; font-weight: 800; }
+  .lockscreen .tag { color: var(--teal); font-weight: 800; font-size: 13px; margin-bottom: 14px; }
+  .pin-dots { display: flex; gap: 16px; margin: 10px 0 6px; height: 20px; }
+  .pin-dots span {
+    width: 17px; height: 17px;
+    border-radius: 50%;
+    border: 2.5px solid var(--pink);
+    background: transparent;
+    transition: background .12s;
+  }
+  .pin-dots span.on { background: var(--pink); }
+  .pin-msg { height: 20px; font-size: 13.5px; font-weight: 800; color: var(--pink); }
+  .pin-msg.shake { animation: shake .35s; }
+  @keyframes shake {
+    20% { transform: translateX(-7px); } 40% { transform: translateX(7px); }
+    60% { transform: translateX(-5px); } 80% { transform: translateX(5px); }
+  }
+  .pinpad {
+    display: grid;
+    grid-template-columns: repeat(3, 76px);
+    gap: 14px;
+    margin-top: 12px;
+  }
+  .pinpad button {
+    width: 76px; height: 76px;
+    border-radius: 50%;
+    border: none;
+    background: #fff;
+    box-shadow: 0 3px 12px rgba(67,56,74,.10);
+    font-family: 'Baloo 2', cursive;
+    font-size: 27px;
+    font-weight: 700;
+    color: var(--ink);
+    cursor: pointer;
+  }
+  .pinpad button:active { background: var(--pink-soft); }
+  .pinpad button.ghost { background: transparent; box-shadow: none; font-size: 21px; color: var(--ink-soft); }
 
   /* ===== PRINT ===== */
   @media print {
-    body { background: #fff; }
-    .topbar, .panel.form-panel, .actions, .no-print { display: none !important; }
+    body { background: #fff; padding-bottom: 0; }
+    .topbar, .panel.form-panel, .dock, .lockscreen, .no-print { display: none !important; }
     .wrap { display: block; padding: 0; max-width: none; }
     .invoice { box-shadow: none; border-radius: 0; }
-    .inv-head { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .inv-table th, .inv-totals .grand td, .inv-notes { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .inv-head, .inv-table th, .inv-totals .grand td, .inv-pay, .inv-notes {
+      -webkit-print-color-adjust: exact; print-color-adjust: exact;
+    }
   }
 </style>
 </head>
 <body>
+
+<!-- ===== PIN LOCK ===== -->
+<div class="lockscreen" id="lockscreen">
+  <img src="logo.jpg" alt="FaasKids logo">
+  <div class="brand"><span class="b1">Faas</span><span class="b2">Kids</span></div>
+  <div class="tag">Grow with Style</div>
+  <div class="pin-dots" id="pinDots"><span></span><span></span><span></span><span></span></div>
+  <div class="pin-msg" id="pinMsg">Enter PIN</div>
+  <div class="pinpad" id="pinpad">
+    <button>1</button><button>2</button><button>3</button>
+    <button>4</button><button>5</button><button>6</button>
+    <button>7</button><button>8</button><button>9</button>
+    <button class="ghost" data-k="clear">Clear</button><button>0</button><button class="ghost" data-k="del">⌫</button>
+  </div>
+</div>
 
 <div class="topbar">
   <img src="logo.jpg" alt="FaasKids logo">
@@ -310,6 +434,7 @@
     <div class="brand"><span class="b1">Faas</span><span class="b2">Kids</span> Invoice</div>
     <div class="tag">Grow with Style</div>
   </div>
+  <button class="lock" id="lockBtn">🔒 Lock</button>
 </div>
 
 <div class="wrap">
@@ -317,15 +442,13 @@
   <div class="panel form-panel">
     <div class="section">
       <h2>👧 Customer</h2>
-      <div class="row2">
-        <div class="field">
-          <label for="custName">Name</label>
-          <input type="text" id="custName" placeholder="Customer name">
-        </div>
-        <div class="field">
-          <label for="custPhone">Phone (optional)</label>
-          <input type="tel" id="custPhone" placeholder="080...">
-        </div>
+      <div class="field">
+        <label for="custName">Name</label>
+        <input type="text" id="custName" placeholder="Customer name" autocomplete="off">
+      </div>
+      <div class="field">
+        <label for="custPhone">WhatsApp / phone (optional)</label>
+        <input type="tel" id="custPhone" placeholder="080..." inputmode="tel" autocomplete="off">
       </div>
     </div>
 
@@ -340,23 +463,18 @@
       <div class="row2">
         <div class="field">
           <label for="delivery">Delivery fee (₦)</label>
-          <input type="number" id="delivery" min="0" placeholder="0">
+          <input type="number" id="delivery" min="0" placeholder="0" inputmode="numeric">
         </div>
         <div class="field">
           <label for="discount">Discount (₦)</label>
-          <input type="number" id="discount" min="0" placeholder="0">
+          <input type="number" id="discount" min="0" placeholder="0" inputmode="numeric">
         </div>
       </div>
       <div class="field">
-        <label for="notes">Notes / payment details (saved on this device)</label>
-        <textarea id="notes" rows="3" placeholder="e.g. Pay to: Account name — Bank — Account number"></textarea>
+        <label for="notes">Extra note (optional)</label>
+        <textarea id="notes" rows="2" placeholder="e.g. Delivery on Friday"></textarea>
       </div>
-    </div>
-
-    <div class="actions">
-      <button class="btn btn-print" id="printBtn">🖨️ Print / Save PDF</button>
-      <button class="btn btn-wa" id="waBtn">📲 Send on WhatsApp</button>
-      <button class="btn btn-new" id="newBtn">🆕 New invoice</button>
+      <button class="btn btn-new" id="newBtn">🆕 Start new invoice</button>
     </div>
   </div>
 
@@ -366,9 +484,9 @@
       <div class="inv-brand">
         <img src="logo.jpg" alt="FaasKids logo">
         <div>
-          <div class="name"><span class="b1" style="color:var(--yellow)">Faas</span><span style="color:var(--pink)">Kids.</span></div>
+          <div class="name"><span style="color:var(--yellow)">Faas</span><span style="color:var(--pink)">Kids.</span></div>
           <div class="slogan">GROW WITH STYLE</div>
-          <div class="contact">📞 0809 111 1750 &nbsp;·&nbsp; @faaskids</div>
+          <div class="contact">📞 0809 111 1750 · @faaskids</div>
         </div>
       </div>
       <div class="inv-meta">
@@ -394,7 +512,7 @@
           </tr>
         </thead>
         <tbody id="invRows">
-          <tr><td colspan="4"><div class="empty-hint">Add items on the left to build the invoice 🎈</div></td></tr>
+          <tr><td colspan="4"><div class="empty-hint">Add items above to build the invoice 🎈</div></td></tr>
         </tbody>
       </table>
 
@@ -404,8 +522,15 @@
         </table>
       </div>
 
+      <div class="inv-pay">
+        <div class="lbl">Payment details</div>
+        <div class="row"><span>Account name</span><b>FaasKids Clothing_Accessories</b></div>
+        <div class="row"><span>Bank</span><b>Moniepoint</b></div>
+        <div class="row"><span>Account number</span><b class="acct">6655747535</b></div>
+      </div>
+
       <div class="inv-notes" id="invNotesBox" style="display:none">
-        <div class="lbl">Notes / Payment</div>
+        <div class="lbl">Note</div>
         <div id="invNotes"></div>
       </div>
 
@@ -417,7 +542,25 @@
   </div>
 </div>
 
+<!-- ===== STICKY ACTION BAR ===== -->
+<div class="dock" id="dock">
+  <div class="total-line">
+    <span class="lbl">TOTAL</span>
+    <span class="val" id="dockTotal">₦0</span>
+  </div>
+  <div class="btns">
+    <button class="btn btn-print" id="printBtn">🖨️ Save PDF</button>
+    <button class="btn btn-wa" id="waBtn">📲 WhatsApp</button>
+  </div>
+</div>
+
 <script>
+const PIN = '1995';
+const PAY = {
+  name: 'FaasKids Clothing_Accessories',
+  bank: 'Moniepoint',
+  number: '6655747535'
+};
 const ITEM_TYPES = [
   'Water Bottle', 'Backpack', 'Snackbox', 'Snackpack',
   'Girls Dress', 'Boys Dress', 'Shoes', 'Inner Wear', 'Other…'
@@ -426,7 +569,54 @@ const QUICK_PRICES = [22000, 27000];
 
 const fmt = n => '₦' + Number(n || 0).toLocaleString('en-NG');
 
-// ---- invoice number: FK-YYMMDD-NNN, counter persisted per day ----
+/* ===== PIN LOCK ===== */
+const lockscreen = document.getElementById('lockscreen');
+const pinDots = document.getElementById('pinDots').children;
+const pinMsg = document.getElementById('pinMsg');
+let entered = '';
+
+function drawDots() {
+  [...pinDots].forEach((d, i) => d.classList.toggle('on', i < entered.length));
+}
+function unlock() {
+  localStorage.setItem('faaskids-unlocked', '1');
+  lockscreen.classList.add('hidden');
+}
+function lock() {
+  localStorage.removeItem('faaskids-unlocked');
+  entered = '';
+  drawDots();
+  pinMsg.textContent = 'Enter PIN';
+  lockscreen.classList.remove('hidden');
+}
+document.getElementById('pinpad').addEventListener('click', e => {
+  const btn = e.target.closest('button');
+  if (!btn) return;
+  const k = btn.dataset.k || btn.textContent.trim();
+  if (k === 'clear') entered = '';
+  else if (k === 'del' || k === '⌫') entered = entered.slice(0, -1);
+  else if (/^\d$/.test(k) && entered.length < 4) entered += k;
+  drawDots();
+  pinMsg.textContent = 'Enter PIN';
+  if (entered.length === 4) {
+    if (entered === PIN) {
+      unlock();
+      entered = '';
+      drawDots();
+    } else {
+      pinMsg.textContent = 'Wrong PIN — try again';
+      pinMsg.classList.remove('shake');
+      void pinMsg.offsetWidth;
+      pinMsg.classList.add('shake');
+      entered = '';
+      setTimeout(drawDots, 250);
+    }
+  }
+});
+document.getElementById('lockBtn').addEventListener('click', lock);
+if (localStorage.getItem('faaskids-unlocked') === '1') lockscreen.classList.add('hidden');
+
+/* ===== invoice number: FK-YYMMDD-NNN, counter persisted per day ===== */
 function makeInvoiceNo() {
   const d = new Date();
   const day = d.getFullYear().toString().slice(2) +
@@ -460,7 +650,7 @@ function addItemRow(focus = true) {
         <label>Qty</label>
         <div class="qty">
           <button type="button" class="q-minus">−</button>
-          <input type="number" class="i-qty" value="1" min="1">
+          <input type="number" class="i-qty" value="1" min="1" inputmode="numeric">
           <button type="button" class="q-plus">+</button>
         </div>
       </div>
@@ -468,7 +658,7 @@ function addItemRow(focus = true) {
         <label>Price each</label>
         <div class="naira-input">
           <span>₦</span>
-          <input type="number" class="i-price" min="0" placeholder="0">
+          <input type="number" class="i-price" min="0" placeholder="0" inputmode="numeric">
         </div>
       </div>
     </div>
@@ -523,12 +713,17 @@ function getItems() {
   }).filter(i => i.price > 0 || i.name !== 'Item');
 }
 
-function render() {
+function totals() {
   const items = getItems();
   const delivery = Math.max(0, parseFloat(document.getElementById('delivery').value) || 0);
   const discount = Math.max(0, parseFloat(document.getElementById('discount').value) || 0);
   const subtotal = items.reduce((s, i) => s + i.amount, 0);
   const total = Math.max(0, subtotal + delivery - discount);
+  return { items, delivery, discount, subtotal, total };
+}
+
+function render() {
+  const { items, delivery, discount, subtotal, total } = totals();
 
   document.getElementById('invNo').textContent = invoiceNo;
   document.getElementById('invDate').textContent = new Date().toLocaleDateString('en-NG', {
@@ -542,7 +737,7 @@ function render() {
 
   const rows = document.getElementById('invRows');
   if (!items.length) {
-    rows.innerHTML = '<tr><td colspan="4"><div class="empty-hint">Add items on the left to build the invoice 🎈</div></td></tr>';
+    rows.innerHTML = '<tr><td colspan="4"><div class="empty-hint">Add items above to build the invoice 🎈</div></td></tr>';
   } else {
     rows.innerHTML = items.map(i => `
       <tr>
@@ -553,11 +748,12 @@ function render() {
       </tr>`).join('');
   }
 
-  let totals = `<tr><td>Subtotal</td><td class="num">${fmt(subtotal)}</td></tr>`;
-  if (delivery) totals += `<tr><td>Delivery</td><td class="num">${fmt(delivery)}</td></tr>`;
-  if (discount) totals += `<tr><td>Discount</td><td class="num">−${fmt(discount)}</td></tr>`;
-  totals += `<tr class="grand"><td>TOTAL</td><td class="num">${fmt(total)}</td></tr>`;
-  document.getElementById('invTotals').innerHTML = totals;
+  let t = `<tr><td>Subtotal</td><td class="num">${fmt(subtotal)}</td></tr>`;
+  if (delivery) t += `<tr><td>Delivery</td><td class="num">${fmt(delivery)}</td></tr>`;
+  if (discount) t += `<tr><td>Discount</td><td class="num">−${fmt(discount)}</td></tr>`;
+  t += `<tr class="grand"><td>TOTAL</td><td class="num">${fmt(total)}</td></tr>`;
+  document.getElementById('invTotals').innerHTML = t;
+  document.getElementById('dockTotal').textContent = fmt(total);
 
   const notes = document.getElementById('notes').value.trim();
   document.getElementById('invNotesBox').style.display = notes ? '' : 'none';
@@ -570,28 +766,16 @@ function escapeHtml(s) {
   }[c]));
 }
 
-// ---- notes persistence ----
-const notesEl = document.getElementById('notes');
-notesEl.value = localStorage.getItem('faaskids-notes') || '';
-notesEl.addEventListener('input', () => {
-  localStorage.setItem('faaskids-notes', notesEl.value);
-  render();
-});
-
-['custName', 'custPhone', 'delivery', 'discount'].forEach(id =>
+['custName', 'custPhone', 'delivery', 'discount', 'notes'].forEach(id =>
   document.getElementById(id).addEventListener('input', render));
 
 document.getElementById('addItem').addEventListener('click', () => addItemRow());
 document.getElementById('printBtn').addEventListener('click', () => window.print());
 
 document.getElementById('waBtn').addEventListener('click', () => {
-  const items = getItems();
-  const delivery = Math.max(0, parseFloat(document.getElementById('delivery').value) || 0);
-  const discount = Math.max(0, parseFloat(document.getElementById('discount').value) || 0);
-  const subtotal = items.reduce((s, i) => s + i.amount, 0);
-  const total = Math.max(0, subtotal + delivery - discount);
+  const { items, delivery, discount, subtotal, total } = totals();
   const name = document.getElementById('custName').value.trim();
-  const notes = notesEl.value.trim();
+  const notes = document.getElementById('notes').value.trim();
 
   let msg = `🧾 *FaasKids Invoice ${invoiceNo}*\n`;
   if (name) msg += `Customer: ${name}\n`;
@@ -601,6 +785,7 @@ document.getElementById('waBtn').addEventListener('click', () => {
   if (delivery) msg += `\nDelivery: ${fmt(delivery)}`;
   if (discount) msg += `\nDiscount: −${fmt(discount)}`;
   msg += `\n*TOTAL: ${fmt(total)}*`;
+  msg += `\n\n💳 *Payment*\n${PAY.name}\n${PAY.bank} — ${PAY.number}`;
   if (notes) msg += `\n\n${notes}`;
   msg += `\n\nFaasKids 💛 Grow with Style\n📞 0809 111 1750`;
 
@@ -614,9 +799,11 @@ document.getElementById('newBtn').addEventListener('click', () => {
   document.getElementById('custPhone').value = '';
   document.getElementById('delivery').value = '';
   document.getElementById('discount').value = '';
+  document.getElementById('notes').value = '';
   itemsEl.innerHTML = '';
   invoiceNo = makeInvoiceNo();
   addItemRow(false);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
 });
 
 addItemRow(false);
