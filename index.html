@@ -13,6 +13,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
 <style>
   :root {
     --pink: #e0447c;
@@ -228,7 +229,8 @@
   .btn-add:active { background: var(--teal); color: #fff; }
   .btn-print { background: var(--pink); color: #fff; box-shadow: 0 4px 14px rgba(224,68,124,.35); }
   .btn-img { background: var(--yellow); color: #fff; box-shadow: 0 4px 14px rgba(245,166,35,.35); }
-  .btn-img:disabled { opacity: .6; }
+  .btn-label { background: var(--teal); color: #fff; box-shadow: 0 4px 14px rgba(42,183,169,.35); }
+  .btn:disabled { opacity: .6; }
   .btn-wa { background: #25d366; color: #fff; }
   .btn-new { background: #fff; color: var(--ink-soft); border: 2px solid var(--line); min-height: 44px; padding: 8px 14px; font-size: 14px; }
 
@@ -253,8 +255,8 @@
   }
   .dock .total-line .lbl { font-size: 13px; font-weight: 800; color: var(--ink-soft); letter-spacing: 1px; }
   .dock .total-line .val { font-family: 'Baloo 2', cursive; font-size: 26px; font-weight: 800; color: var(--teal); }
-  .dock .btns { display: flex; gap: 10px; }
-  .dock .btn { flex: 1; padding: 14px 6px; font-size: 15px; }
+  .dock .btns { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .dock .btn { padding: 13px 2px; font-size: 13.5px; white-space: nowrap; min-height: 48px; }
 
   /* ===== INVOICE ===== */
   .invoice {
@@ -348,6 +350,83 @@
   .inv-foot .sub { font-family: 'Nunito', sans-serif; font-size: 11.5px; color: var(--ink-soft); font-weight: 700; }
 
   .empty-hint { text-align: center; color: var(--ink-soft); font-weight: 700; padding: 26px 10px; font-size: 14px; }
+
+  /* ===== 8x8cm PACKAGE LABEL (640px = 8cm @ 203dpi, thermal b/w) ===== */
+  .label {
+    position: fixed;
+    left: -10000px;
+    top: 0;
+    width: 640px;
+    height: 640px;
+    background: #fff;
+    color: #000;
+    font-family: 'Nunito', sans-serif;
+    display: flex;
+    flex-direction: column;
+    padding: 26px 40px 24px;
+  }
+  .label .lbl-logo {
+    font-family: 'Baloo 2', cursive;
+    font-size: 52px;
+    font-weight: 800;
+    text-align: center;
+    line-height: 1.05;
+    letter-spacing: .01em;
+  }
+  .label .lbl-slogan {
+    text-align: center;
+    font-weight: 800;
+    font-size: 16px;
+    letter-spacing: .35em;
+    margin-top: 2px;
+  }
+  .label .lbl-bar {
+    background: #000;
+    color: #fff;
+    font-weight: 800;
+    font-size: 19px;
+    letter-spacing: .24em;
+    text-align: center;
+    padding: 8px 0 9px;
+    border-radius: 6px;
+    margin: 16px 0;
+  }
+  .label .lbl-fields { flex: 1; display: flex; flex-direction: column; }
+  .label .lbl-row { display: flex; align-items: flex-end; gap: 14px; margin-bottom: 16px; }
+  .label .lbl-k { font-weight: 800; font-size: 19px; flex: 0 0 auto; padding-bottom: 2px; }
+  .label .lbl-line {
+    flex: 1;
+    border-bottom: 2px solid #000;
+    min-height: 30px;
+    font-size: 18px;
+    font-weight: 700;
+    padding: 0 4px 2px;
+    white-space: nowrap;
+    overflow: hidden;
+  }
+  .label .lbl-2 {
+    border-bottom: none;
+    background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 30px, #000 30px, #000 32px);
+    line-height: 32px;
+    min-height: 64px;
+    white-space: normal;
+    overflow: hidden;
+    max-height: 64px;
+  }
+  .label .lbl-cols { display: flex; gap: 28px; }
+  .label .lbl-cols .lbl-row { flex: 1; margin-bottom: 16px; }
+  .label .lbl-care {
+    text-align: center;
+    font-weight: 800;
+    font-size: 17px;
+    letter-spacing: .3em;
+    border: 2px solid #000;
+    border-radius: 100px;
+    padding: 8px 0;
+    margin: 4px 0 14px;
+  }
+  .label .lbl-from { text-align: center; font-weight: 800; font-size: 18px; }
+  .label .lbl-thanks { text-align: center; font-weight: 600; font-size: 14px; margin-top: 4px; letter-spacing: .06em; }
 
   /* ===== PIN LOCK ===== */
   .lockscreen {
@@ -453,6 +532,10 @@
         <label for="custPhone">WhatsApp / phone (optional)</label>
         <input type="tel" id="custPhone" placeholder="080..." inputmode="tel" autocomplete="off">
       </div>
+      <div class="field">
+        <label for="custAddr">Delivery address (for package label)</label>
+        <textarea id="custAddr" rows="2" placeholder="Street, area, city"></textarea>
+      </div>
     </div>
 
     <div class="section">
@@ -545,6 +628,25 @@
   </div>
 </div>
 
+<!-- ===== 8x8cm PACKAGE LABEL (off-screen, rendered to image on demand) ===== -->
+<div class="label" id="label">
+  <div class="lbl-logo">FaasKids.</div>
+  <div class="lbl-slogan">GROW WITH STYLE</div>
+  <div class="lbl-bar">DELIVER TO</div>
+  <div class="lbl-fields">
+    <div class="lbl-row"><span class="lbl-k">Name</span><span class="lbl-line" id="lblName"></span></div>
+    <div class="lbl-row"><span class="lbl-k">Address</span><span class="lbl-line lbl-2" id="lblAddr"></span></div>
+    <div class="lbl-cols">
+      <div class="lbl-row"><span class="lbl-k">Phone</span><span class="lbl-line" id="lblPhone"></span></div>
+      <div class="lbl-row"><span class="lbl-k">Date</span><span class="lbl-line" id="lblDate"></span></div>
+    </div>
+    <div class="lbl-row"><span class="lbl-k">Item / Qty</span><span class="lbl-line lbl-2" id="lblItems"></span></div>
+  </div>
+  <div class="lbl-care">★&nbsp;&nbsp;HANDLE WITH CARE&nbsp;&nbsp;★</div>
+  <div class="lbl-from">From FaasKids&nbsp;&nbsp;·&nbsp;&nbsp;0809 111 1750&nbsp;&nbsp;·&nbsp;&nbsp;@faaskids</div>
+  <div class="lbl-thanks">Thank you for shopping with us!</div>
+</div>
+
 <!-- ===== STICKY ACTION BAR ===== -->
 <div class="dock" id="dock">
   <div class="total-line">
@@ -552,8 +654,9 @@
     <span class="val" id="dockTotal">₦0</span>
   </div>
   <div class="btns">
-    <button class="btn btn-print" id="printBtn">🖨️ PDF</button>
+    <button class="btn btn-print" id="printBtn">📄 PDF</button>
     <button class="btn btn-img" id="imgBtn">🖼️ Image</button>
+    <button class="btn btn-label" id="labelBtn">🏷️ Label</button>
     <button class="btn btn-wa" id="waBtn">📲 WhatsApp</button>
   </div>
 </div>
@@ -774,45 +877,85 @@ function escapeHtml(s) {
   document.getElementById(id).addEventListener('input', render));
 
 document.getElementById('addItem').addEventListener('click', () => addItemRow());
-document.getElementById('printBtn').addEventListener('click', () => window.print());
 
-/* ===== save invoice as picture (share sheet on iPhone → Save Image) ===== */
-document.getElementById('imgBtn').addEventListener('click', async () => {
-  const btn = document.getElementById('imgBtn');
+/* ===== export helpers ===== */
+async function withBusy(btn, idleText, fn) {
   if (typeof html2canvas === 'undefined') {
-    alert('Image tool is still loading — try again in a second.');
+    alert('Export tool is still loading — try again in a second.');
     return;
   }
   btn.disabled = true;
-  btn.textContent = '⏳ Making…';
+  btn.textContent = '⏳';
   try {
-    const canvas = await html2canvas(document.getElementById('invoice'), {
-      scale: 3,
-      backgroundColor: '#ffffff',
-      useCORS: true
-    });
-    const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
-    const file = new File([blob], `FaasKids-${invoiceNo}.png`, { type: 'image/png' });
-    if (navigator.canShare && navigator.canShare({ files: [file] })) {
-      try {
-        await navigator.share({ files: [file], title: `FaasKids Invoice ${invoiceNo}` });
-        return;
-      } catch (e) {
-        if (e.name === 'AbortError') return; // user closed the share sheet
-      }
-    }
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `FaasKids-${invoiceNo}.png`;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+    await fn();
   } catch (e) {
-    alert('Could not create the image: ' + e.message);
+    alert('Export failed: ' + e.message);
   } finally {
     btn.disabled = false;
-    btn.textContent = '🖼️ Image';
+    btn.textContent = idleText;
   }
-});
+}
+
+async function shareOrDownload(file) {
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({ files: [file], title: file.name });
+      return;
+    } catch (e) {
+      if (e.name === 'AbortError') return; // user closed the share sheet
+    }
+  }
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(file);
+  a.download = file.name;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 5000);
+}
+
+function capture(el, scale) {
+  return html2canvas(el, { scale, backgroundColor: '#ffffff', useCORS: true });
+}
+
+/* ===== PDF: real .pdf file of the invoice ===== */
+document.getElementById('printBtn').addEventListener('click', () =>
+  withBusy(document.getElementById('printBtn'), '📄 PDF', async () => {
+    if (!window.jspdf) throw new Error('PDF tool is still loading — try again in a second.');
+    const canvas = await capture(document.getElementById('invoice'), 3);
+    const { jsPDF } = window.jspdf;
+    const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+    const pageW = 210, pageH = 297, margin = 10;
+    let w = pageW - margin * 2;
+    let h = canvas.height * w / canvas.width;
+    if (h > pageH - margin * 2) {
+      h = pageH - margin * 2;
+      w = canvas.width * h / canvas.height;
+    }
+    pdf.addImage(canvas.toDataURL('image/jpeg', 0.95), 'JPEG', (pageW - w) / 2, margin, w, h);
+    const blob = pdf.output('blob');
+    await shareOrDownload(new File([blob], `FaasKids-${invoiceNo}.pdf`, { type: 'application/pdf' }));
+  }));
+
+/* ===== Image: invoice as PNG (share sheet on iPhone → Save Image) ===== */
+document.getElementById('imgBtn').addEventListener('click', () =>
+  withBusy(document.getElementById('imgBtn'), '🖼️ Image', async () => {
+    const canvas = await capture(document.getElementById('invoice'), 3);
+    const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+    await shareOrDownload(new File([blob], `FaasKids-${invoiceNo}.png`, { type: 'image/png' }));
+  }));
+
+/* ===== Label: 8x8cm package label PNG for the Xprinter app ===== */
+document.getElementById('labelBtn').addEventListener('click', () =>
+  withBusy(document.getElementById('labelBtn'), '🏷️ Label', async () => {
+    const { items } = totals();
+    document.getElementById('lblName').textContent = document.getElementById('custName').value.trim();
+    document.getElementById('lblAddr').textContent = document.getElementById('custAddr').value.trim();
+    document.getElementById('lblPhone').textContent = document.getElementById('custPhone').value.trim();
+    document.getElementById('lblDate').textContent = new Date().toLocaleDateString('en-GB');
+    document.getElementById('lblItems').textContent = items.map(i => `${i.name} ×${i.qty}`).join(', ');
+    const canvas = await capture(document.getElementById('label'), 2); // 1280x1280 px = 8x8cm sharp
+    const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
+    await shareOrDownload(new File([blob], `FaasKids-Label-${invoiceNo}.png`, { type: 'image/png' }));
+  }));
 
 document.getElementById('waBtn').addEventListener('click', () => {
   const { items, delivery, discount, subtotal, total } = totals();
