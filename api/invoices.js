@@ -25,7 +25,7 @@ export default async function handler(req, res) {
   if (req.headers['x-pin'] !== (process.env.APP_PIN || '1995')) {
     return res.status(401).json({ error: 'wrong pin' });
   }
-  if (!process.env.BLOB_READ_WRITE_TOKEN) {
+  if (!process.env.BLOB_STORE_ID) {
     return res.status(503).json({ error: 'storage not set up' });
   }
 
