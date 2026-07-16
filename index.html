@@ -366,19 +366,29 @@
     flex-direction: column;
     padding: 26px 40px 24px;
   }
+  .label .lbl-head {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 18px;
+  }
+  .label .lbl-badge {
+    width: 92px;
+    height: 92px;
+    border-radius: 50%;
+    flex: 0 0 auto;
+  }
   .label .lbl-logo {
     font-family: 'Baloo 2', cursive;
-    font-size: 52px;
+    font-size: 48px;
     font-weight: 800;
-    text-align: center;
     line-height: 1.05;
     letter-spacing: .01em;
   }
   .label .lbl-slogan {
-    text-align: center;
     font-weight: 800;
-    font-size: 16px;
-    letter-spacing: .35em;
+    font-size: 15px;
+    letter-spacing: .32em;
     margin-top: 2px;
   }
   .label .lbl-bar {
@@ -701,8 +711,13 @@
 
 <!-- ===== 8x8cm PACKAGE LABEL (off-screen, rendered to image on demand) ===== -->
 <div class="label" id="label">
-  <div class="lbl-logo">FaasKids.</div>
-  <div class="lbl-slogan">GROW WITH STYLE</div>
+  <div class="lbl-head">
+    <img class="lbl-badge" id="lblLogo" src="logo.jpg" alt="">
+    <div>
+      <div class="lbl-logo">FaasKids.</div>
+      <div class="lbl-slogan">GROW WITH STYLE</div>
+    </div>
+  </div>
   <div class="lbl-bar">DELIVER TO</div>
   <div class="lbl-fields">
     <div class="lbl-row"><span class="lbl-k">Name</span><span class="lbl-line" id="lblName"></span></div>
@@ -1125,10 +1140,37 @@ document.getElementById('imgBtn').addEventListener('click', () =>
     await shareOrDownload(new File([blob], `FaasKids-${invoiceNo}.png`, { type: 'image/png' }));
   }));
 
+/* grayscale the round logo once for the thermal label */
+let bwLogoUrl = null;
+async function prepLabelLogo() {
+  if (bwLogoUrl) return;
+  const img = new Image();
+  await new Promise((res, rej) => {
+    img.onload = res;
+    img.onerror = () => rej(new Error('logo failed to load'));
+    img.src = 'logo.jpg';
+  });
+  const c = document.createElement('canvas');
+  c.width = c.height = 240;
+  const ctx = c.getContext('2d');
+  ctx.drawImage(img, 0, 0, 240, 240);
+  const d = ctx.getImageData(0, 0, 240, 240);
+  const p = d.data;
+  for (let i = 0; i < p.length; i += 4) {
+    let v = 0.299 * p[i] + 0.587 * p[i + 1] + 0.114 * p[i + 2];
+    v = Math.max(0, Math.min(255, (v - 128) * 1.35 + 128)); // contrast boost for thermal print
+    p[i] = p[i + 1] = p[i + 2] = v;
+  }
+  ctx.putImageData(d, 0, 0);
+  bwLogoUrl = c.toDataURL('image/png');
+  document.getElementById('lblLogo').src = bwLogoUrl;
+}
+
 /* ===== Label: 8x8cm package label PNG for the Xprinter app ===== */
 document.getElementById('labelBtn').addEventListener('click', () =>
   withBusy(document.getElementById('labelBtn'), '🏷️ Label', async () => {
     saveToHistory();
+    await prepLabelLogo();
     const { items } = totals();
     document.getElementById('lblName').textContent = document.getElementById('custName').value.trim();
     document.getElementById('lblAddr').textContent = document.getElementById('custAddr').value.trim();
