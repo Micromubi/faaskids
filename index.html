@@ -560,6 +560,9 @@
     width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 14px; flex: 0 0 auto;
   }
   .hist-empty { text-align: center; color: var(--ink-soft); font-weight: 700; padding: 30px 10px; }
+  .hist-sync { font-size: 12.5px; font-weight: 700; color: var(--ink-soft); margin-bottom: 8px; }
+  .hist-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
+  .hist-actions .btn { min-height: 44px; padding: 8px 4px; font-size: 13.5px; white-space: nowrap; }
 
   /* ===== PRINT ===== */
   @media print {
@@ -741,7 +744,14 @@
     <h2>🕘 Invoice history</h2>
     <button class="closer" id="histClose">✕</button>
   </div>
+  <div class="hist-sync" id="histSync"></div>
   <div class="hist-list" id="histList"></div>
+  <div class="hist-actions">
+    <button class="btn btn-new" id="histBackup">📤 Backup</button>
+    <button class="btn btn-new" id="histImport">📥 Import</button>
+    <button class="btn btn-new" id="histReset">🧹 Reset all</button>
+  </div>
+  <input type="file" id="histFile" accept=".json,application/json" style="display:none">
 </div>
 
 <!-- ===== STICKY ACTION BAR ===== -->
@@ -1013,6 +1023,53 @@ function saveToHistory() {
   h.unshift(entry);
   if (h.length > 200) h.length = 200;
   localStorage.setItem(HIST_KEY, JSON.stringify(h));
+  cloudPush(entry); // fire-and-forget cloud backup
+}
+
+/* ===== cloud backup (Vercel Blob via /api/invoices) ===== */
+const CLOUD_API = '/api/invoices';
+let cloudOk = null; // null = unknown, true/false after first contact
+
+function cloudFetch(method, body, query) {
+  return fetch(CLOUD_API + (query || ''), {
+    method,
+    headers: { 'x-pin': PIN, 'Content-Type': 'application/json' },
+    body: body ? JSON.stringify(body) : undefined
+  }).then(r => {
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    cloudOk = true;
+    return r.json();
+  }).catch(e => { cloudOk = false; throw e; });
+}
+
+function cloudPush(entry) {
+  cloudFetch('POST', entry).catch(() => {});
+}
+
+function mergeHistories(local, cloud) {
+  const map = new Map();
+  [...cloud, ...local].forEach(e => {
+    const cur = map.get(e.no);
+    if (!cur || (e.ts || 0) > (cur.ts || 0)) map.set(e.no, e);
+  });
+  return [...map.values()].sort((a, b) => (b.ts || 0) - (a.ts || 0)).slice(0, 200);
+}
+
+function setSyncStatus() {
+  const el = document.getElementById('histSync');
+  if (cloudOk === true) el.textContent = '☁️ Backed up online — history follows you to any phone.';
+  else if (cloudOk === false) el.textContent = '📴 Online backup unavailable — history is saved on this phone only.';
+  else el.textContent = '☁️ Checking online backup…';
+}
+
+async function syncFromCloud() {
+  try {
+    const cloud = await cloudFetch('GET');
+    const merged = mergeHistories(getHistory(), Array.isArray(cloud) ? cloud : []);
+    localStorage.setItem(HIST_KEY, JSON.stringify(merged));
+    renderHistory();
+  } catch (e) { /* offline or not set up — local only */ }
+  setSyncStatus();
 }
 
 function loadFromHistory(no) {
@@ -1055,6 +1112,7 @@ function renderHistory() {
     el.querySelector('.del').addEventListener('click', () => {
       if (!confirm(`Delete invoice ${el.dataset.no}?`)) return;
       localStorage.setItem(HIST_KEY, JSON.stringify(getHistory().filter(e => e.no !== el.dataset.no)));
+      cloudFetch('DELETE', null, '?no=' + encodeURIComponent(el.dataset.no)).catch(() => {});
       renderHistory();
     });
   });
@@ -1062,8 +1120,10 @@ function renderHistory() {
 
 function openHistory() {
   renderHistory();
+  setSyncStatus();
   document.getElementById('histOverlay').classList.add('open');
   document.getElementById('histSheet').classList.add('open');
+  syncFromCloud();
 }
 function closeHistory() {
   document.getElementById('histOverlay').classList.remove('open');
@@ -1072,6 +1132,50 @@ function closeHistory() {
 document.getElementById('histBtn').addEventListener('click', openHistory);
 document.getElementById('histClose').addEventListener('click', closeHistory);
 document.getElementById('histOverlay').addEventListener('click', closeHistory);
+
+/* backup: history as a JSON file you can keep anywhere */
+document.getElementById('histBackup').addEventListener('click', async () => {
+  const h = getHistory();
+  if (!h.length) { alert('Nothing to back up yet.'); return; }
+  const blob = new Blob([JSON.stringify(h, null, 2)], { type: 'application/json' });
+  const stamp = new Date().toISOString().slice(0, 10);
+  await shareOrDownload(new File([blob], `FaasKids-backup-${stamp}.json`, { type: 'application/json' }));
+});
+
+/* import: merge a backup file into history */
+document.getElementById('histImport').addEventListener('click', () => document.getElementById('histFile').click());
+document.getElementById('histFile').addEventListener('change', e => {
+  const file = e.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    try {
+      const data = JSON.parse(reader.result);
+      if (!Array.isArray(data)) throw new Error('not a FaasKids backup');
+      const valid = data.filter(x => x && typeof x.no === 'string');
+      const merged = mergeHistories(getHistory(), valid);
+      localStorage.setItem(HIST_KEY, JSON.stringify(merged));
+      valid.forEach(cloudPush);
+      renderHistory();
+      alert(`Imported ${valid.length} invoice(s).`);
+    } catch (err) {
+      alert('Could not read that file: ' + err.message);
+    }
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+});
+
+/* reset: wipe history everywhere and restart numbering */
+document.getElementById('histReset').addEventListener('click', () => {
+  if (!confirm('Delete ALL saved invoices (this phone + online backup) and reset invoice numbers to 001?')) return;
+  localStorage.removeItem(HIST_KEY);
+  localStorage.removeItem('faaskids-inv-counter');
+  cloudFetch('DELETE').catch(() => {});
+  invoiceNo = makeInvoiceNo();
+  render();
+  renderHistory();
+});
 
 /* ===== export helpers ===== */
 async function withBusy(btn, idleText, fn) {
