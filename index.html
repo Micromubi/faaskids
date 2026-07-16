@@ -560,6 +560,33 @@
     width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 14px; flex: 0 0 auto;
   }
   .hist-empty { text-align: center; color: var(--ink-soft); font-weight: 700; padding: 30px 10px; }
+
+  /* ===== SALES STAT TILES ===== */
+  .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
+  .stat-tile {
+    background: var(--teal-soft);
+    border-radius: 14px;
+    padding: 12px 8px;
+    text-align: center;
+  }
+  .stat-tile.pink { background: var(--pink-soft); }
+  .stat-tile.yellow { background: var(--yellow-soft); }
+  .stat-tile .val { font-family: 'Baloo 2', cursive; font-size: 19px; font-weight: 800; color: var(--teal); line-height: 1.1; }
+  .stat-tile.pink .val { color: var(--pink); }
+  .stat-tile.yellow .val { color: #b47410; }
+  .stat-tile .lbl { font-size: 10.5px; font-weight: 800; color: var(--ink-soft); letter-spacing: .04em; text-transform: uppercase; margin-top: 3px; }
+  .sales-subhead { font-size: 13px; font-weight: 800; color: var(--pink); margin: 4px 0 8px; }
+  .item-row {
+    display: flex; align-items: center; gap: 10px;
+    border: 2px solid var(--line);
+    border-radius: 12px;
+    padding: 9px 12px;
+    margin-bottom: 8px;
+  }
+  .item-row .rank { font-family: 'Baloo 2', cursive; font-weight: 800; color: var(--ink-soft); font-size: 14px; width: 20px; flex: 0 0 auto; }
+  .item-row .nm { flex: 1; min-width: 0; font-weight: 800; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .item-row .qty { font-size: 12px; color: var(--ink-soft); font-weight: 700; }
+  .item-row .rev { font-family: 'Baloo 2', cursive; font-weight: 800; color: var(--teal); font-size: 14.5px; flex: 0 0 auto; }
   .hist-sync { font-size: 12.5px; font-weight: 700; color: var(--ink-soft); margin-bottom: 8px; }
   .hist-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
   .hist-actions .btn { min-height: 44px; padding: 8px 4px; font-size: 13.5px; white-space: nowrap; }
@@ -599,7 +626,8 @@
     <div class="brand"><span class="b1">Faas</span><span class="b2">Kids</span> Invoice</div>
     <div class="tag">Grow with Style</div>
   </div>
-  <button class="lock" id="histBtn" style="margin-left:auto">🕘 History</button>
+  <button class="lock" id="salesBtn" style="margin-left:auto">📊 Sales</button>
+  <button class="lock" id="histBtn" style="margin-left:0">🕘</button>
   <button class="lock" id="lockBtn" style="margin-left:0">🔒</button>
 </div>
 
@@ -735,6 +763,17 @@
   <div class="lbl-care">★&nbsp;&nbsp;HANDLE WITH CARE&nbsp;&nbsp;★</div>
   <div class="lbl-from">From FaasKids&nbsp;&nbsp;·&nbsp;&nbsp;0809 111 1750&nbsp;&nbsp;·&nbsp;&nbsp;@faaskids</div>
   <div class="lbl-thanks">Thank you for shopping with us!</div>
+</div>
+
+<!-- ===== SALES SHEET ===== -->
+<div class="hist-overlay" id="salesOverlay"></div>
+<div class="hist-sheet" id="salesSheet">
+  <div class="hist-head">
+    <h2>📊 Sales</h2>
+    <button class="closer" id="salesClose">✕</button>
+  </div>
+  <div class="hist-sync" id="salesSync"></div>
+  <div class="hist-list" id="salesContent"></div>
 </div>
 
 <!-- ===== HISTORY SHEET ===== -->
@@ -1176,6 +1215,67 @@ document.getElementById('histReset').addEventListener('click', () => {
   render();
   renderHistory();
 });
+
+/* ===== sales analysis (built from invoice history) ===== */
+function computeSales(entries) {
+  const totalSales = entries.reduce((s, e) => s + (e.total || 0), 0);
+  const orders = entries.length;
+  const itemMap = new Map();
+  let unitsSold = 0;
+  entries.forEach(e => (e.items || []).forEach(i => {
+    unitsSold += i.qty || 0;
+    const cur = itemMap.get(i.name) || { name: i.name, qty: 0, revenue: 0 };
+    cur.qty += i.qty || 0;
+    cur.revenue += i.amount || (i.qty || 0) * (i.price || 0);
+    itemMap.set(i.name, cur);
+  }));
+  const items = [...itemMap.values()].sort((a, b) => b.revenue - a.revenue);
+  return { totalSales, orders, unitsSold, avgOrder: orders ? totalSales / orders : 0, items };
+}
+
+function renderSales() {
+  const stats = computeSales(getHistory());
+  const content = document.getElementById('salesContent');
+  if (!stats.orders) {
+    content.innerHTML = '<div class="hist-empty">No sales yet.<br>Totals build up here as you export or send invoices.</div>';
+    return;
+  }
+  const tiles = `
+    <div class="stat-grid">
+      <div class="stat-tile"><div class="val">${fmt(stats.totalSales)}</div><div class="lbl">Total Sales</div></div>
+      <div class="stat-tile pink"><div class="val">${stats.orders}</div><div class="lbl">Orders</div></div>
+      <div class="stat-tile yellow"><div class="val">${stats.unitsSold}</div><div class="lbl">Items Sold</div></div>
+    </div>
+    <div class="stat-grid" style="grid-template-columns:1fr">
+      <div class="stat-tile"><div class="val">${fmt(stats.avgOrder)}</div><div class="lbl">Average Order Value</div></div>
+    </div>`;
+  const rows = stats.items.map((i, ix) => `
+    <div class="item-row">
+      <span class="rank">${ix + 1}</span>
+      <span class="nm">${escapeHtml(i.name)}</span>
+      <span class="qty">×${i.qty}</span>
+      <span class="rev">${fmt(i.revenue)}</span>
+    </div>`).join('');
+  content.innerHTML = tiles + '<div class="sales-subhead">Items sold, by revenue</div>' + rows;
+}
+
+function openSales() {
+  renderSales();
+  document.getElementById('salesSync').textContent = cloudOk === true ? '☁️ Includes invoices from all your devices.' : '📴 Showing invoices saved on this phone only.';
+  document.getElementById('salesOverlay').classList.add('open');
+  document.getElementById('salesSheet').classList.add('open');
+  syncFromCloud().then(() => {
+    renderSales();
+    document.getElementById('salesSync').textContent = cloudOk === true ? '☁️ Includes invoices from all your devices.' : '📴 Showing invoices saved on this phone only.';
+  });
+}
+function closeSales() {
+  document.getElementById('salesOverlay').classList.remove('open');
+  document.getElementById('salesSheet').classList.remove('open');
+}
+document.getElementById('salesBtn').addEventListener('click', openSales);
+document.getElementById('salesClose').addEventListener('click', closeSales);
+document.getElementById('salesOverlay').addEventListener('click', closeSales);
 
 /* ===== export helpers ===== */
 async function withBusy(btn, idleText, fn) {
