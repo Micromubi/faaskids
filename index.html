@@ -6,6 +6,7 @@
 <meta name="theme-color" content="#fdf6ef">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="format-detection" content="telephone=no,date=no,address=no,email=no">
 <title>FaasKids — Invoice</title>
 <link rel="icon" type="image/jpeg" href="logo.jpg">
 <link rel="apple-touch-icon" href="logo.jpg">
@@ -391,30 +392,50 @@
     border-radius: 6px;
     margin: 16px 0;
   }
-  .label .lbl-fields { flex: 1; display: flex; flex-direction: column; }
-  .label .lbl-row { display: flex; align-items: flex-end; gap: 14px; margin-bottom: 16px; }
-  .label .lbl-k { font-weight: 800; font-size: 19px; flex: 0 0 auto; padding-bottom: 2px; }
+  .label .lbl-fields { flex: 1; display: flex; flex-direction: column; min-height: 0; }
+  .label .lbl-row { display: flex; align-items: baseline; gap: 12px; margin-bottom: 14px; }
+  .label .lbl-k { font-weight: 800; font-size: 19px; flex: 0 0 auto; }
   .label .lbl-line {
     flex: 1;
     border-bottom: 2px solid #000;
-    min-height: 30px;
+    min-height: 28px;
     font-size: 18px;
     font-weight: 700;
-    padding: 0 4px 2px;
+    line-height: 26px;
+    padding: 0 4px 3px;
     white-space: nowrap;
     overflow: hidden;
   }
   .label .lbl-2 {
-    border-bottom: none;
-    background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 30px, #000 30px, #000 32px);
-    line-height: 32px;
-    min-height: 64px;
     white-space: normal;
-    overflow: hidden;
-    max-height: 64px;
+    max-height: 57px; /* two 26px lines + padding */
+    min-height: 28px;
   }
   .label .lbl-cols { display: flex; gap: 28px; }
-  .label .lbl-cols .lbl-row { flex: 1; margin-bottom: 16px; }
+  .label .lbl-cols .lbl-row { flex: 1; margin-bottom: 14px; }
+  /* items table: name left, qty right, one ruled row per item */
+  .label .lbl-items { flex: 1; min-height: 0; overflow: hidden; margin-top: 2px; }
+  .label .lbl-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 12px;
+    border-bottom: 2px solid #000;
+    padding: 3px 4px 4px;
+    font-size: 17px;
+    font-weight: 700;
+  }
+  .label .lbl-item .n { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .label .lbl-item .q { flex: 0 0 auto; font-weight: 800; }
+  .label .lbl-items.sz-m .lbl-item { font-size: 15px; padding: 2px 4px 3px; border-bottom-width: 1.5px; }
+  .label .lbl-items.sz-s .lbl-item { font-size: 13px; padding: 1px 4px 2px; border-bottom-width: 1px; }
+  .label .lbl-items.cols2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 18px;
+    align-content: start;
+  }
+  .label .lbl-item.blank { min-height: 26px; }
   .label .lbl-care {
     text-align: center;
     font-weight: 800;
@@ -481,6 +502,55 @@
   .pinpad button:active { background: var(--pink-soft); }
   .pinpad button.ghost { background: transparent; box-shadow: none; font-size: 21px; color: var(--ink-soft); }
 
+  /* ===== HISTORY SHEET ===== */
+  .hist-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(67,56,74,.45);
+    z-index: 50;
+    display: none;
+  }
+  .hist-overlay.open { display: block; }
+  .hist-sheet {
+    position: fixed;
+    left: 0; right: 0; bottom: 0;
+    max-width: 560px;
+    margin: 0 auto;
+    max-height: 75vh;
+    background: var(--card);
+    border-radius: 22px 22px 0 0;
+    z-index: 51;
+    display: none;
+    flex-direction: column;
+    padding: 16px 16px calc(16px + env(safe-area-inset-bottom));
+    box-shadow: 0 -8px 30px rgba(67,56,74,.25);
+  }
+  .hist-sheet.open { display: flex; }
+  .hist-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+  .hist-head h2 { font-size: 19px; color: var(--pink); }
+  .hist-head .closer {
+    border: none; background: var(--pink-soft); color: var(--pink);
+    width: 34px; height: 34px; border-radius: 50%; font-weight: 800; font-size: 15px; cursor: pointer;
+  }
+  .hist-list { overflow-y: auto; -webkit-overflow-scrolling: touch; }
+  .hist-item {
+    display: flex; align-items: center; gap: 10px;
+    border: 2px solid var(--line);
+    border-radius: 14px;
+    padding: 10px 12px;
+    margin-bottom: 10px;
+  }
+  .hist-item .info { flex: 1; min-width: 0; cursor: pointer; }
+  .hist-item .no { font-weight: 800; font-size: 14px; color: var(--teal); }
+  .hist-item .who { font-weight: 800; font-size: 15px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .hist-item .sub { font-size: 12.5px; color: var(--ink-soft); font-weight: 700; }
+  .hist-item .amt { font-family: 'Baloo 2', cursive; font-weight: 800; font-size: 17px; color: var(--pink); flex: 0 0 auto; }
+  .hist-item .del {
+    border: none; background: var(--pink-soft); color: var(--pink);
+    width: 32px; height: 32px; border-radius: 50%; cursor: pointer; font-size: 14px; flex: 0 0 auto;
+  }
+  .hist-empty { text-align: center; color: var(--ink-soft); font-weight: 700; padding: 30px 10px; }
+
   /* ===== PRINT ===== */
   @media print {
     body { background: #fff; padding-bottom: 0; }
@@ -516,7 +586,8 @@
     <div class="brand"><span class="b1">Faas</span><span class="b2">Kids</span> Invoice</div>
     <div class="tag">Grow with Style</div>
   </div>
-  <button class="lock" id="lockBtn">🔒 Lock</button>
+  <button class="lock" id="histBtn" style="margin-left:auto">🕘 History</button>
+  <button class="lock" id="lockBtn" style="margin-left:0">🔒</button>
 </div>
 
 <div class="wrap">
@@ -640,11 +711,22 @@
       <div class="lbl-row"><span class="lbl-k">Phone</span><span class="lbl-line" id="lblPhone"></span></div>
       <div class="lbl-row"><span class="lbl-k">Date</span><span class="lbl-line" id="lblDate"></span></div>
     </div>
-    <div class="lbl-row"><span class="lbl-k">Item / Qty</span><span class="lbl-line lbl-2" id="lblItems"></span></div>
+    <div class="lbl-row" style="margin-bottom:6px"><span class="lbl-k">Item / Qty</span></div>
+    <div class="lbl-items" id="lblItems"></div>
   </div>
   <div class="lbl-care">★&nbsp;&nbsp;HANDLE WITH CARE&nbsp;&nbsp;★</div>
   <div class="lbl-from">From FaasKids&nbsp;&nbsp;·&nbsp;&nbsp;0809 111 1750&nbsp;&nbsp;·&nbsp;&nbsp;@faaskids</div>
   <div class="lbl-thanks">Thank you for shopping with us!</div>
+</div>
+
+<!-- ===== HISTORY SHEET ===== -->
+<div class="hist-overlay" id="histOverlay"></div>
+<div class="hist-sheet" id="histSheet">
+  <div class="hist-head">
+    <h2>🕘 Invoice history</h2>
+    <button class="closer" id="histClose">✕</button>
+  </div>
+  <div class="hist-list" id="histList"></div>
 </div>
 
 <!-- ===== STICKY ACTION BAR ===== -->
@@ -740,7 +822,7 @@ let invoiceNo = makeInvoiceNo();
 
 const itemsEl = document.getElementById('items');
 
-function addItemRow(focus = true) {
+function addItemRow(focus = true, data = null) {
   const card = document.createElement('div');
   card.className = 'item-card';
   card.innerHTML = `
@@ -803,6 +885,20 @@ function addItemRow(focus = true) {
     render();
   });
   card.querySelectorAll('input').forEach(i => i.addEventListener('input', render));
+
+  if (data) {
+    if (ITEM_TYPES.includes(data.name)) {
+      sel.value = data.name;
+    } else {
+      sel.value = 'Other…';
+      customWrap.classList.add('show');
+      card.querySelector('.i-custom').value = data.name;
+    }
+    qtyInput.value = data.qty;
+    priceInput.value = data.price || '';
+    card.querySelectorAll('.chip').forEach(c =>
+      c.classList.toggle('active', c.dataset.price === String(data.price)));
+  }
 
   itemsEl.appendChild(card);
   if (focus) sel.focus();
@@ -878,6 +974,90 @@ function escapeHtml(s) {
 
 document.getElementById('addItem').addEventListener('click', () => addItemRow());
 
+/* ===== invoice history (saved on this device) ===== */
+const HIST_KEY = 'faaskids-history';
+
+function getHistory() {
+  try { return JSON.parse(localStorage.getItem(HIST_KEY)) || []; } catch (e) { return []; }
+}
+
+function saveToHistory() {
+  const { items, delivery, discount, total } = totals();
+  const name = document.getElementById('custName').value.trim();
+  if (!items.length && !name) return;
+  const entry = {
+    no: invoiceNo,
+    ts: Date.now(),
+    name,
+    phone: document.getElementById('custPhone').value.trim(),
+    addr: document.getElementById('custAddr').value.trim(),
+    notes: document.getElementById('notes').value.trim(),
+    delivery, discount, total, items
+  };
+  const h = getHistory().filter(e => e.no !== entry.no);
+  h.unshift(entry);
+  if (h.length > 200) h.length = 200;
+  localStorage.setItem(HIST_KEY, JSON.stringify(h));
+}
+
+function loadFromHistory(no) {
+  const s = getHistory().find(e => e.no === no);
+  if (!s) return;
+  document.getElementById('custName').value = s.name || '';
+  document.getElementById('custPhone').value = s.phone || '';
+  document.getElementById('custAddr').value = s.addr || '';
+  document.getElementById('notes').value = s.notes || '';
+  document.getElementById('delivery').value = s.delivery || '';
+  document.getElementById('discount').value = s.discount || '';
+  itemsEl.innerHTML = '';
+  (s.items || []).forEach(i => addItemRow(false, i));
+  if (!s.items || !s.items.length) addItemRow(false);
+  invoiceNo = s.no;
+  render();
+  closeHistory();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function renderHistory() {
+  const h = getHistory();
+  const list = document.getElementById('histList');
+  if (!h.length) {
+    list.innerHTML = '<div class="hist-empty">No saved invoices yet.<br>Invoices are saved here automatically when you export or send them.</div>';
+    return;
+  }
+  list.innerHTML = h.map(e => `
+    <div class="hist-item" data-no="${escapeHtml(e.no)}">
+      <div class="info">
+        <div class="no">${escapeHtml(e.no)}</div>
+        <div class="who">${escapeHtml(e.name || '—')}</div>
+        <div class="sub">${new Date(e.ts).toLocaleDateString('en-GB')} · ${(e.items || []).reduce((s, i) => s + i.qty, 0)} item(s)</div>
+      </div>
+      <div class="amt">${fmt(e.total)}</div>
+      <button class="del" title="Delete">🗑</button>
+    </div>`).join('');
+  list.querySelectorAll('.hist-item').forEach(el => {
+    el.querySelector('.info').addEventListener('click', () => loadFromHistory(el.dataset.no));
+    el.querySelector('.del').addEventListener('click', () => {
+      if (!confirm(`Delete invoice ${el.dataset.no}?`)) return;
+      localStorage.setItem(HIST_KEY, JSON.stringify(getHistory().filter(e => e.no !== el.dataset.no)));
+      renderHistory();
+    });
+  });
+}
+
+function openHistory() {
+  renderHistory();
+  document.getElementById('histOverlay').classList.add('open');
+  document.getElementById('histSheet').classList.add('open');
+}
+function closeHistory() {
+  document.getElementById('histOverlay').classList.remove('open');
+  document.getElementById('histSheet').classList.remove('open');
+}
+document.getElementById('histBtn').addEventListener('click', openHistory);
+document.getElementById('histClose').addEventListener('click', closeHistory);
+document.getElementById('histOverlay').addEventListener('click', closeHistory);
+
 /* ===== export helpers ===== */
 async function withBusy(btn, idleText, fn) {
   if (typeof html2canvas === 'undefined') {
@@ -920,6 +1100,7 @@ function capture(el, scale) {
 document.getElementById('printBtn').addEventListener('click', () =>
   withBusy(document.getElementById('printBtn'), '📄 PDF', async () => {
     if (!window.jspdf) throw new Error('PDF tool is still loading — try again in a second.');
+    saveToHistory();
     const canvas = await capture(document.getElementById('invoice'), 3);
     const { jsPDF } = window.jspdf;
     const pdf = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
@@ -938,6 +1119,7 @@ document.getElementById('printBtn').addEventListener('click', () =>
 /* ===== Image: invoice as PNG (share sheet on iPhone → Save Image) ===== */
 document.getElementById('imgBtn').addEventListener('click', () =>
   withBusy(document.getElementById('imgBtn'), '🖼️ Image', async () => {
+    saveToHistory();
     const canvas = await capture(document.getElementById('invoice'), 3);
     const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
     await shareOrDownload(new File([blob], `FaasKids-${invoiceNo}.png`, { type: 'image/png' }));
@@ -946,18 +1128,26 @@ document.getElementById('imgBtn').addEventListener('click', () =>
 /* ===== Label: 8x8cm package label PNG for the Xprinter app ===== */
 document.getElementById('labelBtn').addEventListener('click', () =>
   withBusy(document.getElementById('labelBtn'), '🏷️ Label', async () => {
+    saveToHistory();
     const { items } = totals();
     document.getElementById('lblName').textContent = document.getElementById('custName').value.trim();
     document.getElementById('lblAddr').textContent = document.getElementById('custAddr').value.trim();
     document.getElementById('lblPhone').textContent = document.getElementById('custPhone').value.trim();
     document.getElementById('lblDate').textContent = new Date().toLocaleDateString('en-GB');
-    document.getElementById('lblItems').textContent = items.map(i => `${i.name} ×${i.qty}`).join(', ');
+    const list = document.getElementById('lblItems');
+    list.className = 'lbl-items'
+      + (items.length > 5 ? ' cols2' : '')
+      + (items.length > 12 ? ' sz-s' : items.length > 5 ? ' sz-m' : '');
+    list.innerHTML = items.length
+      ? items.map(i => `<div class="lbl-item"><span class="n">${escapeHtml(i.name)}</span><span class="q">×${i.qty}</span></div>`).join('')
+      : '<div class="lbl-item blank"></div><div class="lbl-item blank"></div><div class="lbl-item blank"></div>';
     const canvas = await capture(document.getElementById('label'), 2); // 1280x1280 px = 8x8cm sharp
     const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
     await shareOrDownload(new File([blob], `FaasKids-Label-${invoiceNo}.png`, { type: 'image/png' }));
   }));
 
 document.getElementById('waBtn').addEventListener('click', () => {
+  saveToHistory();
   const { items, delivery, discount, subtotal, total } = totals();
   const name = document.getElementById('custName').value.trim();
   const notes = document.getElementById('notes').value.trim();
@@ -980,8 +1170,10 @@ document.getElementById('waBtn').addEventListener('click', () => {
 });
 
 document.getElementById('newBtn').addEventListener('click', () => {
+  saveToHistory(); // keep the current one before starting fresh
   document.getElementById('custName').value = '';
   document.getElementById('custPhone').value = '';
+  document.getElementById('custAddr').value = '';
   document.getElementById('delivery').value = '';
   document.getElementById('discount').value = '';
   document.getElementById('notes').value = '';
