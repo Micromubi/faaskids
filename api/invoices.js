@@ -1,9 +1,10 @@
 import { list, put, del } from '@vercel/blob';
+import { getVercelOidcToken } from '@vercel/oidc';
 
 const PREFIX = 'faaskids-history';
 
 async function readHistory() {
-  const { blobs } = await list({ prefix: PREFIX });
+  const { blobs } = await list({ prefix: PREFIX, ...(await resolveAuth()) });
   if (!blobs.length) return { entries: [], blobs: [] };
   const newest = [...blobs].sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt))[0];
   const res = await fetch(newest.url);
@@ -12,13 +13,19 @@ async function readHistory() {
 }
 
 async function writeHistory(entries, oldBlobs) {
+  const auth = await resolveAuth();
   if (entries.length) {
     await put(`${PREFIX}-${Date.now()}.json`, JSON.stringify(entries), {
       access: 'public',
-      contentType: 'application/json'
+      contentType: 'application/json',
+      ...auth
     });
   }
-  await Promise.all(oldBlobs.map(b => del(b.url).catch(() => {})));
+  await Promise.all(oldBlobs.map(b => del(b.url, auth).catch(() => {})));
+}
+
+async function resolveAuth() {
+  return { storeId: process.env.BLOB_STORE_ID, oidcToken: await getVercelOidcToken() };
 }
 
 export default async function handler(req, res) {
