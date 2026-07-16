@@ -4,10 +4,11 @@ import { getVercelOidcToken } from '@vercel/oidc';
 const PREFIX = 'faaskids-history';
 
 async function readHistory() {
-  const { blobs } = await list({ prefix: PREFIX, ...(await resolveAuth()) });
+  const auth = await resolveAuth();
+  const { blobs } = await list({ prefix: PREFIX, ...auth });
   if (!blobs.length) return { entries: [], blobs: [] };
   const newest = [...blobs].sort((a, b) => new Date(b.uploadedAt) - new Date(a.uploadedAt))[0];
-  const res = await fetch(newest.url);
+  const res = await fetch(newest.url, { headers: { Authorization: `Bearer ${auth.oidcToken}` } });
   const entries = res.ok ? await res.json() : [];
   return { entries: Array.isArray(entries) ? entries : [], blobs };
 }
@@ -16,7 +17,7 @@ async function writeHistory(entries, oldBlobs) {
   const auth = await resolveAuth();
   if (entries.length) {
     await put(`${PREFIX}-${Date.now()}.json`, JSON.stringify(entries), {
-      access: 'public',
+      access: 'private',
       contentType: 'application/json',
       ...auth
     });
