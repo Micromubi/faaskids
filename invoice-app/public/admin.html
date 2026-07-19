@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin panel</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛠️</text></svg>">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root { --p:#333844; --p-soft:#e8eaef; --a:#2f6fed; --a-soft:#e3ecfd; --bg:#f5f6f8; --card:#fff;
+    --ink:#2c2f36; --ink-soft:#84878f; --line:#e6e6ea; --danger:#c0355c; --danger-soft:#fbe4ec; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'Nunito', sans-serif; background: var(--bg); color: var(--ink); min-height: 100vh; }
+  h1, h2 { font-family: 'Baloo 2', cursive; }
+  .topbar { background: var(--p); color: #fff; padding: 14px 20px; display: flex; align-items: center; gap: 12px; }
+  .topbar h1 { font-size: 20px; }
+  .topbar a { margin-left: auto; color: #fff; font-weight: 800; font-size: 13.5px; text-decoration: none;
+    border: 2px solid rgba(255,255,255,.4); border-radius: 10px; padding: 7px 12px; }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 20px 16px 60px; display: flex; flex-direction: column; gap: 18px; }
+  .panel { background: var(--card); border-radius: 16px; padding: 18px; box-shadow: 0 3px 14px rgba(0,0,0,.06); }
+  .panel h2 { font-size: 17px; margin-bottom: 12px; color: var(--p); }
+  .muted { color: var(--ink-soft); font-size: 13px; font-weight: 700; }
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
+  .tile { background: var(--a-soft); border-radius: 12px; padding: 14px 10px; text-align: center; }
+  .tile .v { font-family: 'Baloo 2', cursive; font-size: 22px; font-weight: 800; color: var(--a); }
+  .tile .l { font-size: 11px; font-weight: 800; color: var(--ink-soft); text-transform: uppercase; margin-top: 3px; }
+  .tablewrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 13.5px; min-width: 560px; }
+  th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .06em; color: var(--ink-soft);
+    padding: 8px 10px; border-bottom: 2px solid var(--line); }
+  td { padding: 10px; border-bottom: 1px solid var(--line); font-weight: 700; }
+  td.num, th.num { text-align: right; }
+  .pill { display: inline-block; background: var(--p-soft); border-radius: 999px; padding: 3px 10px; font-size: 12px; font-weight: 800; }
+  .pill.admin { background: var(--a-soft); color: var(--a); }
+  button { font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 13px; border: none; border-radius: 10px;
+    padding: 8px 12px; cursor: pointer; background: var(--p-soft); color: var(--p); }
+  button.danger { background: var(--danger-soft); color: var(--danger); }
+  button.primary { background: var(--a); color: #fff; }
+  select, textarea, input[type=text] { width: 100%; border: 2px solid var(--line); border-radius: 10px; padding: 10px 12px;
+    font-family: 'Nunito', sans-serif; font-weight: 700; font-size: 14px; outline: none; }
+  textarea { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12.5px; min-height: 260px; }
+  .row { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; flex-wrap: wrap; }
+  .row > * { flex: 1; }
+  .row > button { flex: 0 0 auto; }
+  .err { color: var(--danger); font-weight: 800; font-size: 13px; min-height: 18px; margin-top: 6px; }
+  .gate { max-width: 420px; margin: 12vh auto; text-align: center; }
+</style>
+</head>
+<body>
+<div class="topbar"><h1>🛠️ Admin panel</h1><a href="/">← Back to app</a></div>
+
+<div class="wrap hidden" id="main" style="display:none">
+  <div class="panel">
+    <h2>Overview</h2>
+    <div class="stat-grid" id="stats"></div>
+  </div>
+
+  <div class="panel">
+    <h2>Businesses</h2>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Business</th><th>Owner</th><th>Category</th><th class="num">Invoices</th><th class="num">Revenue</th><th>Last activity</th><th></th></tr></thead>
+      <tbody id="bizRows"></tbody>
+    </table></div>
+  </div>
+
+  <div class="panel">
+    <h2>Users</h2>
+    <div class="tablewrap"><table>
+      <thead><tr><th>Email</th><th>Business</th><th>Role</th><th>Last seen</th><th></th></tr></thead>
+      <tbody id="userRows"></tbody>
+    </table></div>
+  </div>
+
+  <div class="panel">
+    <h2>Category presets</h2>
+    <p class="muted" style="margin-bottom:10px">What each business type gets at signup: starter catalogue, measurement templates, document wording. Changes apply to new signups.</p>
+    <div class="row">
+      <select id="catSel"></select>
+      <input type="text" id="catName" placeholder="Display name">
+      <button class="primary" id="catSave">Save preset</button>
+    </div>
+    <textarea id="catJson" spellcheck="false"></textarea>
+    <div class="err" id="catErr"></div>
+  </div>
+</div>
+
+<div class="gate" id="gate" style="display:none">
+  <div class="panel">
+    <h2>Admins only</h2>
+    <p class="muted" style="margin:10px 0">This area is for the app administrator. Sign in with an admin account in the main app first.</p>
+    <a href="/"><button class="primary">Go to the app</button></a>
+  </div>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+async function api(method, url, body) {
+  const res = await fetch(url, { method, headers: body ? { 'Content-Type': 'application/json' } : {},
+    body: body ? JSON.stringify(body) : undefined });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || 'Request failed');
+  return data;
+}
+const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+const fmtN = n => '₦' + Number(n || 0).toLocaleString('en-NG');
+const ago = ts => ts ? new Date(ts).toLocaleDateString('en-GB') : '—';
+
+let categories = [];
+
+async function boot() {
+  try {
+    const me = await api('GET', '/api/me');
+    if (!me.user || !me.user.isAdmin) throw new Error('not admin');
+  } catch (e) { $('gate').style.display = ''; return; }
+  $('main').style.display = '';
+  await Promise.all([loadStats(), loadBiz(), loadUsers(), loadCats()]);
+}
+
+async function loadStats() {
+  const s = await api('GET', '/api/admin/overview');
+  $('stats').innerHTML = `
+    <div class="tile"><div class="v">${s.businesses}</div><div class="l">Businesses</div></div>
+    <div class="tile"><div class="v">${s.users}</div><div class="l">Users</div></div>
+    <div class="tile"><div class="v">${s.invoices}</div><div class="l">Invoices total</div></div>
+    <div class="tile"><div class="v">${s.invoicesThisWeek}</div><div class="l">This week</div></div>
+    <div class="tile"><div class="v">${fmtN(s.revenueTracked)}</div><div class="l">Revenue tracked</div></div>`;
+}
+
+async function loadBiz() {
+  const rows = await api('GET', '/api/admin/businesses');
+  $('bizRows').innerHTML = rows.map(b => `
+    <tr>
+      <td>${esc(b.name)}</td><td>${esc(b.owner)}</td><td><span class="pill">${esc(b.category)}</span></td>
+      <td class="num">${b.invoices}</td><td class="num">${fmtN(b.revenue)}</td>
+      <td>${ago(b.last_invoice_at)}</td>
+      <td><button class="danger" data-id="${b.id}" data-name="${esc(b.name)}">Delete</button></td>
+    </tr>`).join('') || '<tr><td colspan="7" class="muted">No businesses yet.</td></tr>';
+  $('bizRows').querySelectorAll('button').forEach(btn => btn.addEventListener('click', async () => {
+    if (!confirm(`Delete "${btn.dataset.name}" and ALL its invoices, customers and records? This cannot be undone.`)) return;
+    await api('DELETE', '/api/admin/businesses/' + btn.dataset.id);
+    await Promise.all([loadStats(), loadBiz(), loadUsers()]);
+  }));
+}
+
+async function loadUsers() {
+  const rows = await api('GET', '/api/admin/users');
+  $('userRows').innerHTML = rows.map(u => `
+    <tr>
+      <td>${esc(u.email)}</td><td>${esc(u.business || '—')}</td>
+      <td><span class="pill ${u.is_admin ? 'admin' : ''}">${u.is_admin ? 'Admin' : 'User'}</span></td>
+      <td>${ago(u.last_seen_at)}</td>
+      <td><button data-id="${u.id}" data-admin="${u.is_admin}">${u.is_admin ? 'Remove admin' : 'Make admin'}</button></td>
+    </tr>`).join('');
+  $('userRows').querySelectorAll('button').forEach(btn => btn.addEventListener('click', async () => {
+    try {
+      await api('PUT', '/api/admin/users/' + btn.dataset.id, { isAdmin: btn.dataset.admin !== '1' });
+      loadUsers();
+    } catch (e) { alert(e.message); }
+  }));
+}
+
+async function loadCats() {
+  categories = await api('GET', '/api/categories');
+  $('catSel').innerHTML = categories.map(c => `<option value="${c.slug}">${esc(c.slug)}</option>`).join('');
+  showCat();
+}
+function showCat() {
+  const c = categories.find(x => x.slug === $('catSel').value);
+  if (!c) return;
+  $('catName').value = c.name;
+  $('catJson').value = JSON.stringify(c.preset, null, 2);
+  $('catErr').textContent = '';
+}
+$('catSel').addEventListener('change', showCat);
+$('catSave').addEventListener('click', async () => {
+  $('catErr').textContent = '';
+  try {
+    JSON.parse($('catJson').value); // validate locally first
+    await api('PUT', '/api/admin/categories/' + $('catSel').value, {
+      name: $('catName').value, preset: $('catJson').value
+    });
+    await loadCats();
+    $('catErr').style.color = 'var(--a)';
+    $('catErr').textContent = 'Saved ✅';
+    setTimeout(() => { $('catErr').textContent = ''; $('catErr').style.color = ''; }, 2000);
+  } catch (e) { $('catErr').style.color = ''; $('catErr').textContent = e.message; }
+});
+
+boot();
+</script>
+</body>
+</html>
