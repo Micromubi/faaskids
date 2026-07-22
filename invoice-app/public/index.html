@@ -631,7 +631,7 @@
       <!-- TAB: settings -->
       <div id="tab-settings" class="hidden">
         <div class="settings-grid" style="max-width:960px">
-          <div class="card">
+          <div class="card owner-card">
             <h2>Brand</h2>
             <div class="field"><label>Business name</label><input type="text" id="setName" maxlength="60"></div>
             <div class="field"><label>Tagline</label><input type="text" id="setSlogan" maxlength="80"></div>
@@ -648,7 +648,7 @@
             <div class="field"><label>Invoice design</label><div class="tpl-grid" id="tplPicker"></div></div>
           </div>
           <div>
-            <div class="card">
+            <div class="card owner-card">
               <h2>Payment details</h2>
               <div class="field"><label>Account name</label><input type="text" id="setAcctName"></div>
               <div class="row2">
@@ -656,22 +656,36 @@
                 <div class="field"><label>Account number</label><input type="tel" id="setAcctNo"></div>
               </div>
             </div>
-            <div class="card" id="tplPanel">
+            <div class="card owner-card" id="tplPanel">
               <h2>Measurement templates</h2>
               <div class="muted" style="margin-bottom:10px">Field lists used when recording a client's measurements.</div>
               <div id="tplList"></div>
               <button class="btn btn-add" id="tplAdd">+ New template</button>
             </div>
           </div>
-          <div class="card span2">
+          <div class="card span2 owner-card">
             <h2>Catalogue &amp; prices</h2>
             <div class="muted" style="margin-bottom:10px">These power the item dropdown and quick-price buttons.</div>
             <div id="setCat"></div>
             <button class="btn btn-add" id="setCatAdd">+ Add item</button>
           </div>
-          <div class="card span2">
+          <div class="card span2 owner-card">
             <button class="btn btn-primary" id="setSave" style="max-width:280px">Save settings</button>
-            <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
+          </div>
+          <div class="card span2 owner-card" id="teamCard">
+            <h2>Team</h2>
+            <div class="muted" style="margin-bottom:10px">Staff sign in with their own email (same sign-in screen) and work inside this business — customers, measurements and invoices. They cannot see Sales, change settings, or delete anything.</div>
+            <div id="teamList"></div>
+            <div class="row2" style="grid-template-columns:1fr auto;align-items:end;margin-top:10px">
+              <div class="field" style="margin-bottom:0"><input type="email" id="teamEmail" placeholder="worker@email.com"></div>
+              <button class="btn btn-ghost" id="teamAdd" style="min-height:40px">+ Add to team</button>
+            </div>
+            <div class="err" id="teamErr"></div>
+          </div>
+          <div class="card span2">
+            <h2>Account</h2>
+            <div class="muted" id="roleNote" style="margin-bottom:10px"></div>
+            <div style="display:flex;gap:10px;flex-wrap:wrap">
               <button class="btn btn-ghost" id="signOut">Sign out on this device</button>
               <button class="btn btn-ghost" id="signOutAll">Sign out everywhere</button>
             </div>
@@ -732,7 +746,7 @@
 /* ================= helpers ================= */
 const $ = id => document.getElementById(id);
 const CUR = { NGN: '₦', USD: '$', GHS: 'GH₵', KES: 'KSh', GBP: '£', EUR: '€', ZAR: 'R' };
-let state = { user: null, business: null, catalogue: [], categories: [], templates: [], customers: [], history: [] };
+let state = { user: null, business: null, role: 'owner', catalogue: [], categories: [], templates: [], customers: [], history: [] };
 let draft = { number: null };
 
 const fmt = n => (CUR[state.business?.currency] || '') + Number(n || 0).toLocaleString('en-NG');
@@ -785,7 +799,7 @@ function themeChips(container, current, onPick) {
 /* ================= boot ================= */
 async function boot() {
   const me = await api('GET', '/api/me');
-  state.user = me.user; state.business = me.business; state.catalogue = me.catalogue || [];
+  state.user = me.user; state.business = me.business; state.role = me.role || 'owner'; state.catalogue = me.catalogue || [];
   if (!me.user) return show('auth');
   if (!me.business) { state.categories = await api('GET', '/api/categories'); return show('onboard'); }
   applyBusiness();
@@ -1129,6 +1143,34 @@ function applyBusiness() {
   setCatDraw();
   $('whoami').textContent = state.user.email;
   $('adminLink').classList.toggle('hidden', !state.user.isAdmin);
+  const staff = state.role !== 'owner';
+  document.querySelectorAll('.owner-card').forEach(el => el.classList.toggle('hidden', staff));
+  document.querySelector('.nav [data-tab="sales"]').classList.toggle('hidden', staff);
+  $('roleNote').textContent = staff
+    ? 'You are signed in as staff of ' + b.name + '. The owner manages settings and sales.'
+    : 'You are the owner of this business.';
+  if (!staff) drawTeam();
+}
+
+async function drawTeam() {
+  const host = $('teamList');
+  if (!host) return;
+  let team = [];
+  try { team = await api('GET', '/api/team'); } catch (e) { return; }
+  host.innerHTML = team.map(m => `
+    <div class="list-item" data-id="${m.id}">
+      <div class="info" style="cursor:default">
+        <div class="t1">${esc(m.email)}</div>
+        <div class="t2">${m.role === 'owner' ? 'Owner' : 'Staff' + (m.last_seen_at ? ' · last seen ' + new Date(m.last_seen_at).toLocaleDateString('en-GB') : ' · has not signed in yet')}</div>
+      </div>
+      ${m.role === 'owner' ? '' : '<button class="del" title="Remove from team">✕</button>'}
+    </div>`).join('');
+  host.querySelectorAll('.del').forEach(btn => btn.addEventListener('click', async () => {
+    const row = btn.closest('.list-item');
+    if (!confirm('Remove this person from your team? They will be signed out everywhere.')) return;
+    await api('DELETE', '/api/team/' + row.dataset.id);
+    drawTeam();
+  }));
 }
 
 /* ================= invoice editor ================= */
@@ -1416,11 +1458,11 @@ async function refreshHistory() {
         <div class="t2">${new Date(e.ts).toLocaleDateString('en-GB')} · ${e.items.reduce((s, i) => s + i.qty, 0)} item(s)</div>
       </div>
       <div class="amt">${fmt(e.total)}</div>
-      <button class="del">✕</button>
+      ${state.role === 'owner' ? '<button class="del">✕</button>' : ''}
     </div>`).join('');
   host.querySelectorAll('.list-item').forEach(el => {
     el.querySelector('.info').addEventListener('click', () => loadInvoice(el.dataset.no));
-    el.querySelector('.del').addEventListener('click', async () => {
+    el.querySelector('.del')?.addEventListener('click', async () => {
       if (!confirm(`Delete ${el.dataset.no}?`)) return;
       await api('DELETE', '/api/invoices/' + encodeURIComponent(el.dataset.no));
       refreshHistory();
@@ -1475,11 +1517,11 @@ async function refreshCustomers() {
         <div class="t1">${esc(c.name)}</div>
         <div class="t2">${esc(c.phone || 'No phone')}${c.records ? ' · ' + c.records + ' record(s)' : ''}${c.invoices ? ' · ' + c.invoices + ' invoice(s)' : ''}</div>
       </div>
-      <button class="del">✕</button>
+      ${state.role === 'owner' ? '<button class="del">✕</button>' : ''}
     </div>`).join('');
   host.querySelectorAll('.list-item').forEach(el => {
     el.querySelector('.info').addEventListener('click', () => openCustomer(Number(el.dataset.id)));
-    el.querySelector('.del').addEventListener('click', async () => {
+    el.querySelector('.del')?.addEventListener('click', async () => {
       const c = state.customers.find(x => x.id === Number(el.dataset.id));
       if (!confirm(`Delete ${c.name} and their records?`)) return;
       await api('DELETE', '/api/customers/' + el.dataset.id);
@@ -1521,10 +1563,10 @@ async function openCustomer(id) {
         <div class="t2">${new Date(r.ts).toLocaleDateString('en-GB')} · ${pairs.length} field(s)${r.note ? ' · ' + esc(r.note) : ''}</div>
       </div>
       <button class="btn btn-ghost" style="min-height:32px;padding:4px 12px;font-size:12px">Share</button>
-      <button class="del">✕</button>`;
+      ${state.role === 'owner' ? '<button class="del">✕</button>' : ''}`;
     el.querySelector('.info').addEventListener('click', () => openRecordEntry(c, r));
     el.querySelector('.btn-ghost').addEventListener('click', () => shareRecordCard(c, r));
-    el.querySelector('.del').addEventListener('click', async () => {
+    el.querySelector('.del')?.addEventListener('click', async () => {
       if (!confirm('Delete this record?')) return;
       await api('DELETE', '/api/records/' + r.id);
       openCustomer(id);
@@ -1553,7 +1595,7 @@ function openRecordEntry(cust, record, latest) {
   $('recSheetTitle').textContent = 'Measurements — ' + cust.name;
   const tplOpts = state.templates.map(t =>
     `<option value="${t.id}" ${record && record.templateId === t.id ? 'selected' : ''}>${esc(t.name)}</option>`).join('')
-    + '<option value="__new">+ New garment type…</option>';
+    + (state.role === 'owner' ? '<option value="__new">+ New garment type…</option>' : '');
   body.innerHTML = `
     <div class="field"><label>Garment / template</label><select id="recTpl">${tplOpts}</select></div>
     <div id="recFields"></div>
@@ -1721,6 +1763,18 @@ $('setSave').addEventListener('click', async () => {
     toast('Settings saved');
   } catch (e) { toast(e.message); }
   finally { $('setSave').disabled = false; }
+});
+
+$('teamAdd').addEventListener('click', async () => {
+  $('teamErr').textContent = '';
+  try {
+    $('teamAdd').disabled = true;
+    await api('POST', '/api/team', { email: $('teamEmail').value });
+    $('teamEmail').value = '';
+    toast('Added to your team');
+    drawTeam();
+  } catch (e) { $('teamErr').textContent = e.message; }
+  finally { $('teamAdd').disabled = false; }
 });
 
 $('signOut').addEventListener('click', async () => {

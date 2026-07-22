@@ -93,6 +93,17 @@ function sessionMiddleware(req, res, next) {
     if (sess) {
       req.user = db.prepare('SELECT * FROM users WHERE id = ?').get(sess.user_id);
       req.business = db.prepare('SELECT * FROM businesses WHERE owner_user_id = ?').get(sess.user_id) || null;
+      req.role = req.business ? 'owner' : null;
+      if (!req.business) {
+        // staff membership: work inside someone else's business
+        const m = db.prepare(`SELECT b.*, m.role AS member_role FROM memberships m
+          JOIN businesses b ON b.id = m.business_id WHERE m.user_id = ?`).get(sess.user_id);
+        if (m) {
+          req.role = m.member_role || 'staff';
+          delete m.member_role;
+          req.business = m;
+        }
+      }
       req.sessionTokenHash = sess.token_hash;
       if (Date.now() - sess.last_seen_at > 60 * 60 * 1000) {
         db.prepare('UPDATE sessions SET last_seen_at = ? WHERE token_hash = ?').run(Date.now(), sess.token_hash);

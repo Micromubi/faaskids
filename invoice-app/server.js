@@ -12,6 +12,8 @@ app.use(sessionMiddleware);
 app.use(express.static(path.join(__dirname, 'public')));
 
 const wrap = fn => (req, res, next) => Promise.resolve(fn(req, res, next)).catch(next);
+const requireOwner = (req, res, next) =>
+  req.role === 'owner' ? next() : res.status(403).json({ error: 'Only the business owner can do this' });
 const num = v => Math.max(0, Number(v) || 0);
 const str = (v, max = 500) => String(v == null ? '' : v).trim().slice(0, max);
 
@@ -49,6 +51,7 @@ app.get('/api/me', (req, res) => {
   if (!req.user) return res.json({ user: null });
   res.json({
     user: { email: req.user.email, isAdmin: !!req.user.is_admin },
+    role: req.business ? req.role : null,
     business: bizPublic(req.business),
     catalogue: req.business
       ? db.prepare('SELECT id, name, default_price price, unit FROM catalogue_items WHERE business_id = ? ORDER BY sort, id').all(req.business.id)
@@ -110,7 +113,7 @@ app.post('/api/onboard', requireAuth, wrap(async (req, res) => {
 }));
 
 /* ============ SETTINGS ============ */
-app.put('/api/business', requireAuth, requireBusiness, (req, res) => {
+app.put('/api/business', requireAuth, requireBusiness, requireOwner, (req, res) => {
   const b = req.body || {};
   const cur = req.business;
   const payments = Array.isArray(b.payments)
@@ -129,7 +132,7 @@ app.put('/api/business', requireAuth, requireBusiness, (req, res) => {
   res.json({ ok: true, business: bizPublic(db.prepare('SELECT * FROM businesses WHERE id = ?').get(cur.id)) });
 });
 
-app.put('/api/catalogue', requireAuth, requireBusiness, (req, res) => {
+app.put('/api/catalogue', requireAuth, requireBusiness, requireOwner, (req, res) => {
   const items = Array.isArray(req.body.items) ? req.body.items.slice(0, 200) : [];
   const tx = db.transaction(() => {
     db.prepare('DELETE FROM catalogue_items WHERE business_id = ?').run(req.business.id);
@@ -209,12 +212,12 @@ app.post('/api/invoices', requireAuth, requireBusiness, (req, res) => {
   res.json({ ok: true, number, subtotal, total });
 });
 
-app.delete('/api/invoices/:number', requireAuth, requireBusiness, (req, res) => {
+app.delete('/api/invoices/:number', requireAuth, requireBusiness, requireOwner, (req, res) => {
   db.prepare('DELETE FROM invoices WHERE business_id = ? AND number = ?').run(req.business.id, req.params.number);
   res.json({ ok: true });
 });
 
-app.get('/api/sales', requireAuth, requireBusiness, (req, res) => {
+app.get('/api/sales', requireAuth, requireBusiness, requireOwner, (req, res) => {
   const rows = db.prepare('SELECT * FROM invoices WHERE business_id = ?').all(req.business.id);
   let totalSales = 0, unitsSold = 0;
   const itemMap = new Map();
@@ -251,7 +254,7 @@ app.post('/api/customers', requireAuth, requireBusiness, (req, res) => {
   res.json({ ok: true, id });
 });
 
-app.delete('/api/customers/:id', requireAuth, requireBusiness, (req, res) => {
+app.delete('/api/customers/:id', requireAuth, requireBusiness, requireOwner, (req, res) => {
   db.prepare('DELETE FROM customers WHERE business_id = ? AND id = ?').run(req.business.id, req.params.id);
   res.json({ ok: true });
 });
@@ -280,7 +283,7 @@ app.post('/api/customers/:id/records', requireAuth, requireBusiness, (req, res) 
   res.json({ ok: true });
 });
 
-app.delete('/api/records/:id', requireAuth, requireBusiness, (req, res) => {
+app.delete('/api/records/:id', requireAuth, requireBusiness, requireOwner, (req, res) => {
   db.prepare('DELETE FROM records WHERE business_id = ? AND id = ?').run(req.business.id, req.params.id);
   res.json({ ok: true });
 });
@@ -291,7 +294,7 @@ app.get('/api/templates', requireAuth, requireBusiness, (req, res) => {
     .map(t => ({ id: t.id, name: t.name, fields: JSON.parse(t.fields_json) })));
 });
 
-app.post('/api/templates', requireAuth, requireBusiness, (req, res) => {
+app.post('/api/templates', requireAuth, requireBusiness, requireOwner, (req, res) => {
   const name = str(req.body.name, 60);
   if (!name) throw httpErr(400, 'Template name is required');
   const fields = (Array.isArray(req.body.fields) ? req.body.fields : []).slice(0, 40)
@@ -306,8 +309,43 @@ app.post('/api/templates', requireAuth, requireBusiness, (req, res) => {
   res.json({ ok: true });
 });
 
-app.delete('/api/templates/:id', requireAuth, requireBusiness, (req, res) => {
+app.delete('/api/templates/:id', requireAuth, requireBusiness, requireOwner, (req, res) => {
   db.prepare('DELETE FROM record_templates WHERE business_id = ? AND id = ?').run(req.business.id, req.params.id);
+  res.json({ ok: true });
+});
+
+/* ============ TEAM (staff access to this business) ============ */
+app.get('/api/team', requireAuth, requireBusiness, requireOwner, (req, res) => {
+  const staff = db.prepare(`SELECT u.id, u.email, m.role, m.created_at,
+      (SELECT MAX(last_seen_at) FROM sessions s WHERE s.user_id = u.id) last_seen_at
+    FROM memberships m JOIN users u ON u.id = m.user_id
+    WHERE m.business_id = ? ORDER BY m.created_at`).all(req.business.id);
+  res.json([{ id: req.user.id, email: req.user.email, role: 'owner' }, ...staff]);
+});
+
+app.post('/api/team', requireAuth, requireBusiness, requireOwner, (req, res) => {
+  const email = str(req.body.email, 120).toLowerCase();
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw httpErr(400, 'Enter a valid email address');
+  if (email === req.user.email) throw httpErr(400, 'That is your own email');
+  let user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
+  if (user) {
+    if (db.prepare('SELECT 1 FROM businesses WHERE owner_user_id = ?').get(user.id))
+      throw httpErr(400, 'That person already runs their own business on this app');
+    const m = db.prepare('SELECT business_id FROM memberships WHERE user_id = ?').get(user.id);
+    if (m && m.business_id === req.business.id) throw httpErr(400, 'Already on your team');
+    if (m) throw httpErr(400, 'That person is already on another business\u2019s team');
+  } else {
+    const r = db.prepare('INSERT INTO users (email, is_admin, created_at) VALUES (?, 0, ?)').run(email, Date.now());
+    user = { id: r.lastInsertRowid };
+  }
+  db.prepare('INSERT INTO memberships (user_id, business_id, role, created_at) VALUES (?, ?, ?, ?)')
+    .run(user.id, req.business.id, 'staff', Date.now());
+  res.json({ ok: true });
+});
+
+app.delete('/api/team/:userId', requireAuth, requireBusiness, requireOwner, (req, res) => {
+  db.prepare('DELETE FROM memberships WHERE business_id = ? AND user_id = ?').run(req.business.id, req.params.userId);
+  db.prepare('DELETE FROM sessions WHERE user_id = ?').run(req.params.userId);
   res.json({ ok: true });
 });
 

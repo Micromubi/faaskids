@@ -51,6 +51,13 @@ CREATE TABLE IF NOT EXISTS businesses (
   doc_noun TEXT NOT NULL DEFAULT 'Invoice',
   created_at INTEGER NOT NULL
 );
+CREATE TABLE IF NOT EXISTS memberships (
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  role TEXT NOT NULL DEFAULT 'staff',
+  created_at INTEGER NOT NULL,
+  PRIMARY KEY (user_id, business_id)
+);
 CREATE TABLE IF NOT EXISTS customers (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
