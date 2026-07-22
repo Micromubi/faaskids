@@ -3,562 +3,619 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#101216">
+<meta name="theme-color" content="#0e1013">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="format-detection" content="telephone=no,date=no,address=no,email=no">
 <title>Invoice App</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23444ce7'/><path d='M30 28h40v8H30zm0 18h40v8H30zm0 18h26v8H30z' fill='white'/></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%230e1013'/><path d='M28 30h44v7H28zm0 16h44v7H28zm0 16h28v7H28z' fill='%237c8aff'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
 <style>
   :root {
-    --accent: #444ce7; --accent-strong: #3538cd; --accent-tint: #eef0fd; --accent-ink: #2d31a6;
-    --bg: #f6f7f9; --surface: #ffffff; --ink: #16181d; --ink-2: #5c616b; --ink-3: #9aa0aa;
-    --border: #e4e6ea; --border-strong: #d4d7dd;
-    --ok: #0f8a5f; --ok-tint: #e6f5ef; --warn-ink: #92400e; --warn-tint: #fdf3e2;
-    --danger: #c2314c; --danger-tint: #fbebee;
-    --r: 10px; --r-lg: 14px;
-    --shadow: 0 1px 2px rgba(16,24,40,.05);
-    --shadow-lift: 0 8px 28px rgba(16,24,40,.12);
+    --accent: #4f5df0; --accent-deep: #3a46d4; --accent-soft: rgba(79,93,240,.1); --accent-text: #3641b8;
+    --shell: #0e1013; --shell-2: #16191e; --shell-line: #262b33; --shell-text: #9aa3b2; --shell-bright: #f2f4f8;
+    --paper: #f3f4f6; --card: #ffffff; --ink: #191c22; --ink-2: #626977; --ink-3: #9ba1ad;
+    --line: #e6e8ec; --line-2: #d7dae0;
+    --good: #17835a; --good-soft: #e4f3ec; --bad: #bb3352; --bad-soft: #f9e9ed; --note-ink: #8a5a12; --note-soft: #faf1df;
+    --disp: 'Space Grotesk', 'Inter', sans-serif;
   }
-  body[data-theme="teal"]    { --accent:#0d8a8a; --accent-strong:#0a6e6e; --accent-tint:#e4f4f4; --accent-ink:#0a5c5c; }
-  body[data-theme="emerald"] { --accent:#12855c; --accent-strong:#0e6a49; --accent-tint:#e5f4ee; --accent-ink:#0b5a3e; }
-  body[data-theme="amber"]   { --accent:#b45309; --accent-strong:#92400e; --accent-tint:#faf0e4; --accent-ink:#7c3a08; }
-  body[data-theme="crimson"] { --accent:#b42145; --accent-strong:#951b39; --accent-tint:#f9e8ed; --accent-ink:#7d1730; }
-  body[data-theme="slate"]   { --accent:#3d4654; --accent-strong:#2b323d; --accent-tint:#eceef1; --accent-ink:#242a33; }
+  body[data-theme="teal"]    { --accent:#0f9490; --accent-deep:#0b7371; --accent-soft:rgba(15,148,144,.1); --accent-text:#0b6462; }
+  body[data-theme="emerald"] { --accent:#189065; --accent-deep:#127350; --accent-soft:rgba(24,144,101,.1); --accent-text:#0f6446; }
+  body[data-theme="amber"]   { --accent:#c26b10; --accent-deep:#9d560c; --accent-soft:rgba(194,107,16,.12); --accent-text:#8a4c0b; }
+  body[data-theme="crimson"] { --accent:#c62a51; --accent-deep:#a02141; --accent-soft:rgba(198,42,81,.1); --accent-text:#8e1e3a; }
+  body[data-theme="slate"]   { --accent:#49566b; --accent-deep:#374254; --accent-soft:rgba(73,86,107,.12); --accent-text:#374254; }
 
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   html { -webkit-text-size-adjust: 100%; }
-  body { font-family: 'Inter', -apple-system, sans-serif; background: var(--bg); color: var(--ink);
-    min-height: 100vh; font-size: 15px; letter-spacing: -0.01em; }
+  body { font-family: 'Inter', -apple-system, sans-serif; background: var(--paper); color: var(--ink);
+    min-height: 100vh; font-size: 14.5px; letter-spacing: -0.006em; }
   .hidden { display: none !important; }
+  h1, h2, h3 { font-family: var(--disp); letter-spacing: -0.01em; }
+  .num, .amt, .v { font-family: var(--disp); font-variant-numeric: tabular-nums; }
 
-  /* ===== app bar ===== */
-  .appbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 12px 18px;
-    padding-top: calc(12px + env(safe-area-inset-top)); display: flex; align-items: center; gap: 12px;
-    position: sticky; top: 0; z-index: 10; }
-  .mark { width: 38px; height: 38px; border-radius: 9px; background: var(--accent); color: #fff;
-    display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 15px;
-    letter-spacing: 0; flex: 0 0 auto; }
-  .appbar .biz { min-width: 0; }
-  .appbar .biz .n { font-weight: 700; font-size: 15.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-  .appbar .biz .s { font-size: 12px; color: var(--ink-3); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  /* ======================= APP SHELL ======================= */
+  .shell { display: flex; min-height: 100vh; }
+  .side { width: 228px; flex: 0 0 auto; background: var(--shell); color: var(--shell-text);
+    display: flex; flex-direction: column; position: sticky; top: 0; height: 100vh; }
+  .side-brand { display: flex; align-items: center; gap: 10px; padding: 20px 18px 16px; color: var(--shell-bright); }
+  .side-brand .glyph { width: 30px; height: 30px; border-radius: 8px; background: var(--accent); color: #fff;
+    display: flex; align-items: center; justify-content: center; font-family: var(--disp); font-weight: 700; font-size: 13px; }
+  .side-brand .t { font-family: var(--disp); font-weight: 700; font-size: 15px; letter-spacing: 0; }
+  .side-biz { margin: 4px 12px 14px; padding: 10px 12px; background: var(--shell-2); border: 1px solid var(--shell-line);
+    border-radius: 10px; display: flex; align-items: center; gap: 10px; min-width: 0; }
+  .side-biz .avatar { width: 30px; height: 30px; border-radius: 8px; background: var(--accent-soft); color: var(--accent);
+    display: flex; align-items: center; justify-content: center; font-family: var(--disp); font-weight: 700; font-size: 12px;
+    background: rgba(255,255,255,.08); color: var(--shell-bright); flex: 0 0 auto; }
+  .side-biz .n { color: var(--shell-bright); font-weight: 600; font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .side-biz .s { font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .nav { display: flex; flex-direction: column; gap: 2px; padding: 0 12px; }
+  .nav button { display: flex; align-items: center; gap: 11px; width: 100%; border: none; background: none;
+    color: var(--shell-text); font-family: inherit; font-weight: 500; font-size: 13.5px; padding: 10px 12px;
+    border-radius: 9px; cursor: pointer; text-align: left; }
+  .nav button svg { width: 18px; height: 18px; stroke: currentColor; flex: 0 0 auto; }
+  .nav button:hover { color: var(--shell-bright); background: var(--shell-2); }
+  .nav button.active { color: var(--shell-bright); background: var(--shell-2); box-shadow: inset 2px 0 0 var(--accent); }
+  .side-foot { margin-top: auto; padding: 14px 18px; border-top: 1px solid var(--shell-line); font-size: 11.5px; }
+  .side-foot .em { color: var(--shell-bright); font-weight: 500; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .side-foot a { color: var(--shell-text); text-decoration: underline; cursor: pointer; }
 
-  .wrap { max-width: 640px; margin: 0 auto; padding: 18px 16px; display: flex; flex-direction: column; gap: 14px;
-    padding-bottom: calc(150px + env(safe-area-inset-bottom)); }
-  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg);
-    padding: 20px; box-shadow: var(--shadow); }
-  .card h2 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em;
-    color: var(--ink-2); margin-bottom: 14px; }
-  .section { margin-bottom: 24px; }
-  .section:last-child { margin-bottom: 0; }
-  .muted { color: var(--ink-3); font-size: 13px; font-weight: 500; }
+  .main { flex: 1; min-width: 0; }
+  .main-head { padding: 22px 28px 0; display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+  .main-head h1 { font-size: 21px; font-weight: 700; }
+  .main-body { padding: 18px 28px 40px; }
 
-  label { font-size: 13px; font-weight: 600; color: var(--ink-2); display: block; margin-bottom: 6px; }
+  /* invoice workspace: editor + live preview */
+  .workgrid { display: grid; grid-template-columns: minmax(340px, 5fr) minmax(380px, 6fr); gap: 20px; align-items: start; }
+  .col-preview { position: sticky; top: 18px; }
+  .actionbar { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; background: var(--card);
+    border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; }
+  .actionbar .total { margin-right: auto; }
+  .actionbar .total .l { font-size: 10px; font-weight: 600; color: var(--ink-3); text-transform: uppercase; letter-spacing: .09em; }
+  .actionbar .total .v { font-size: 19px; font-weight: 700; line-height: 1.1; }
+
+  /* ======================= components ======================= */
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 18px; margin-bottom: 14px; }
+  .card > h2 { font-size: 14px; font-weight: 600; margin-bottom: 14px; }
+  .muted { color: var(--ink-3); font-size: 12.5px; font-weight: 400; }
+
+  label { font-size: 12px; font-weight: 500; color: var(--ink-2); display: block; margin-bottom: 5px; }
   input[type=text], input[type=tel], input[type=number], input[type=email], select, textarea {
-    width: 100%; min-height: 46px; padding: 11px 13px; border: 1px solid var(--border-strong);
-    border-radius: var(--r); font-family: inherit; font-size: 15px; font-weight: 500; color: var(--ink);
-    background: var(--surface); outline: none; transition: border-color .15s, box-shadow .15s;
-    appearance: none; -webkit-appearance: none; }
-  select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239aa0aa' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-    background-repeat: no-repeat; background-position: right 13px center; padding-right: 36px; }
-  input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint); }
+    width: 100%; min-height: 40px; padding: 9px 11px; border: 1px solid var(--line-2); border-radius: 8px;
+    font-family: inherit; font-size: 14px; color: var(--ink); background: var(--card); outline: none;
+    transition: border-color .12s, box-shadow .12s; appearance: none; -webkit-appearance: none; }
+  select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='11' height='7'%3E%3Cpath d='M1 1l4.5 4.5L10 1' stroke='%239ba1ad' stroke-width='1.6' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 11px center; padding-right: 32px; }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
   .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .field { margin-bottom: 14px; }
+  .field { margin-bottom: 12px; }
 
-  .btn { font-family: inherit; font-weight: 600; font-size: 14.5px; border: none; border-radius: var(--r);
-    padding: 12px 18px; min-height: 46px; cursor: pointer; transition: filter .12s, transform .06s; }
-  .btn:active { transform: translateY(1px); }
+  .btn { font-family: inherit; font-weight: 600; font-size: 13px; border: none; border-radius: 8px;
+    padding: 10px 14px; min-height: 38px; cursor: pointer; transition: filter .1s; }
   .btn:disabled { opacity: .5; }
-  .btn-primary { background: var(--accent); color: #fff; width: 100%; }
-  .btn-primary:hover { filter: brightness(1.06); }
-  .btn-ghost { background: var(--surface); color: var(--ink-2); border: 1px solid var(--border-strong); min-height: 42px; padding: 9px 14px; font-size: 13.5px; }
-  .btn-add { width: 100%; background: none; color: var(--accent); border: 1px dashed var(--border-strong); font-weight: 600; }
-  .btn-add:hover { border-color: var(--accent); background: var(--accent-tint); }
+  .btn:hover { filter: brightness(1.04); }
+  .btn-primary { background: var(--accent); color: #fff; width: 100%; min-height: 42px; }
+  .btn-ghost { background: var(--card); color: var(--ink-2); border: 1px solid var(--line-2); }
+  .btn-add { width: 100%; background: none; color: var(--accent-text); border: 1px dashed var(--line-2); }
+  .btn-add:hover { border-color: var(--accent); background: var(--accent-soft); }
+  .b-pdf { background: var(--ink); color: #fff; }
+  .b-img, .b-lbl { background: var(--card); color: var(--ink); border: 1px solid var(--line-2); }
+  .b-wa { background: var(--good); color: #fff; }
 
-  .chips { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
-  .chip { border: 1px solid var(--border-strong); background: var(--surface); color: var(--ink-2);
-    font-family: inherit; font-weight: 600; font-size: 13px; padding: 7px 13px; border-radius: 999px; cursor: pointer; }
-  .chip.active, .chip:active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .chips { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+  .chip { border: 1px solid var(--line-2); background: var(--card); color: var(--ink-2); font-family: var(--disp);
+    font-weight: 600; font-size: 12px; padding: 5px 11px; border-radius: 999px; cursor: pointer; }
+  .chip.active, .chip:active { background: var(--ink); border-color: var(--ink); color: #fff; }
 
-  /* line items */
-  .item-card { border: 1px solid var(--border); border-radius: var(--r); padding: 14px; margin-bottom: 12px;
-    background: var(--bg); position: relative; }
-  .item-card .remove { position: absolute; top: 10px; right: 10px; border: none; background: none;
-    color: var(--ink-3); width: 30px; height: 30px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 15px; }
-  .item-card .remove:hover { background: var(--danger-tint); color: var(--danger); }
-  .item-card > label:first-of-type { padding-right: 36px; }
-  .qty-price { display: grid; grid-template-columns: 124px 1fr; gap: 10px; margin-top: 10px; }
-  .qty { display: flex; align-items: stretch; border: 1px solid var(--border-strong); border-radius: var(--r);
-    overflow: hidden; background: var(--surface); min-height: 46px; }
-  .qty button { width: 40px; border: none; background: none; color: var(--ink-2); font-size: 19px; font-weight: 600; cursor: pointer; }
+  .item-card { border: 1px solid var(--line); border-left: 3px solid var(--accent); border-radius: 8px;
+    padding: 12px; margin-bottom: 10px; background: var(--paper); position: relative; }
+  .item-card .remove { position: absolute; top: 8px; right: 8px; border: none; background: none; color: var(--ink-3);
+    width: 26px; height: 26px; border-radius: 6px; cursor: pointer; font-size: 13px; }
+  .item-card .remove:hover { background: var(--bad-soft); color: var(--bad); }
+  .item-card > label:first-of-type { padding-right: 32px; }
+  .qty-price { display: grid; grid-template-columns: 112px 1fr; gap: 10px; margin-top: 10px; }
+  .qty { display: flex; align-items: stretch; border: 1px solid var(--line-2); border-radius: 8px; overflow: hidden;
+    background: var(--card); min-height: 40px; }
+  .qty button { width: 34px; border: none; background: none; color: var(--ink-2); font-size: 17px; cursor: pointer; }
   .qty button:active { background: var(--accent); color: #fff; }
-  .qty input { width: 100%; min-height: 0; border: none; border-radius: 0; text-align: center; font-size: 15.5px;
-    font-weight: 700; padding: 0; background: none; }
+  .qty input { width: 100%; min-height: 0; border: none; border-radius: 0; text-align: center; font-family: var(--disp);
+    font-size: 14px; font-weight: 600; padding: 0; background: none; }
   .qty input::-webkit-outer-spin-button, .qty input::-webkit-inner-spin-button { -webkit-appearance: none; }
   .naira-input { position: relative; }
-  .naira-input span { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); font-weight: 600; color: var(--ink-3); font-size: 14px; }
-  .naira-input input { padding-left: 34px; }
-  .custom-name { margin-top: 10px; display: none; }
+  .naira-input span { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); font-weight: 500; color: var(--ink-3); font-size: 13px; }
+  .naira-input input { padding-left: 30px; font-family: var(--disp); font-weight: 600; }
+  .custom-name { margin-top: 8px; display: none; }
   .custom-name.show { display: block; }
 
-  /* ===== action dock + tab nav ===== */
-  .dock { position: fixed; left: 0; right: 0; bottom: calc(56px + env(safe-area-inset-bottom));
-    background: var(--surface); border-top: 1px solid var(--border); padding: 10px 16px; z-index: 20;
-    max-width: 640px; margin: 0 auto; box-shadow: 0 -4px 20px rgba(16,24,40,.06); }
-  .dock .inner { display: flex; align-items: center; gap: 10px; }
-  .dock .total { flex: 0 0 auto; }
-  .dock .total .l { font-size: 10.5px; font-weight: 700; color: var(--ink-3); text-transform: uppercase; letter-spacing: .08em; }
-  .dock .total .v { font-size: 19px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
-  .dock .btns { flex: 1; display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-  .dock .btn { padding: 10px 2px; font-size: 12.5px; min-height: 40px; white-space: nowrap; font-weight: 600; }
-  .b-pdf { background: var(--ink); color: #fff; }
-  .b-img, .b-lbl { background: var(--surface); color: var(--ink); border: 1px solid var(--border-strong); }
-  .b-wa { background: var(--ok); color: #fff; }
-
-  .tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 21; background: var(--surface);
-    border-top: 1px solid var(--border); max-width: 640px; margin: 0 auto; display: grid;
-    grid-template-columns: repeat(5, 1fr); padding-bottom: env(safe-area-inset-bottom); }
-  .tabbar button { border: none; background: none; padding: 7px 0 8px; font-family: inherit;
-    font-weight: 600; font-size: 10px; color: var(--ink-3); cursor: pointer; letter-spacing: .02em; }
-  .tabbar button svg { display: block; margin: 0 auto 2px; width: 20px; height: 20px; stroke: currentColor; }
-  .tabbar button.active { color: var(--accent); }
-
-  /* ===== invoice document ===== */
-  .doc { background: #fff; border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow); overflow: hidden; }
-  .doc-inner { padding: 28px 26px; }
+  /* ======================= invoice document ======================= */
+  .doc { background: #fff; border: 1px solid var(--line); border-radius: 12px; overflow: hidden;
+    box-shadow: 0 1px 3px rgba(20,24,33,.07); }
+  .doc-band { height: 6px; background: var(--accent); }
+  .doc-inner { padding: 26px 26px 24px; }
   .doc-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
-  .doc-brand { display: flex; align-items: center; gap: 11px; min-width: 0; }
-  .doc-brand .mark { width: 42px; height: 42px; border-radius: 9px; font-size: 16px; }
-  .doc-brand .n { font-weight: 800; font-size: 18px; letter-spacing: -.02em; }
-  .doc-brand .s { font-size: 11.5px; color: var(--ink-2); font-weight: 500; }
-  .doc-brand .c { font-size: 11.5px; color: var(--ink-3); font-weight: 500; margin-top: 1px; }
+  .doc-brand .n { font-family: var(--disp); font-weight: 700; font-size: 19px; }
+  .doc-brand .s { font-size: 11.5px; color: var(--ink-2); margin-top: 1px; }
+  .doc-brand .c { font-size: 11.5px; color: var(--ink-3); margin-top: 3px; }
   .doc-meta { text-align: right; flex: 0 0 auto; }
-  .doc-meta .t { font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); }
-  .doc-meta .no { font-weight: 700; font-size: 14.5px; font-variant-numeric: tabular-nums; margin-top: 2px; }
-  .doc-meta .d { font-size: 12px; color: var(--ink-2); font-weight: 500; margin-top: 1px; }
-  .doc-rule { height: 3px; background: var(--accent); border-radius: 2px; margin: 18px 0; }
-  .doc-to .l { font-size: 10.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); }
-  .doc-to .who { font-size: 16px; font-weight: 700; margin-top: 2px; }
-  .doc-to .ph { font-size: 12.5px; color: var(--ink-2); font-weight: 500; }
-  table.doc-table { width: 100%; border-collapse: collapse; margin-top: 18px; }
-  .doc-table th { text-align: left; font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase;
-    color: var(--ink-3); font-weight: 700; padding: 0 8px 8px; border-bottom: 2px solid var(--ink); }
+  .doc-meta .t { font-family: var(--disp); font-size: 12px; font-weight: 600; letter-spacing: .18em; text-transform: uppercase; color: var(--accent-text); }
+  .doc-meta .no { font-family: var(--disp); font-weight: 600; font-size: 14px; margin-top: 3px; }
+  .doc-meta .d { font-size: 11.5px; color: var(--ink-2); margin-top: 1px; }
+  .doc-to { margin-top: 20px; display: inline-block; background: var(--paper); border-radius: 8px; padding: 10px 14px; min-width: 46%; }
+  .doc-to .l { font-size: 9.5px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); }
+  .doc-to .who { font-weight: 600; font-size: 15px; margin-top: 2px; }
+  .doc-to .ph { font-size: 12px; color: var(--ink-2); }
+  table.doc-table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+  .doc-table th { text-align: left; font-size: 10px; letter-spacing: .11em; text-transform: uppercase;
+    color: var(--ink-3); font-weight: 600; padding: 0 8px 7px; border-bottom: 1.5px solid var(--line-2); }
   .doc-table th.num, .doc-table td.num { text-align: right; }
   .doc-table th.ctr, .doc-table td.ctr { text-align: center; }
-  .doc-table td { padding: 11px 8px; font-size: 13.5px; font-weight: 500; border-bottom: 1px solid var(--border);
-    font-variant-numeric: tabular-nums; }
-  .doc-table td:first-child { font-weight: 600; }
-  .empty-hint { text-align: center; color: var(--ink-3); font-weight: 500; padding: 24px 10px; font-size: 13.5px; }
-  .doc-totals { margin-top: 6px; display: flex; justify-content: flex-end; }
-  .doc-totals table { min-width: 240px; border-collapse: collapse; }
-  .doc-totals td { padding: 6px 8px; font-size: 13.5px; font-weight: 500; color: var(--ink-2); font-variant-numeric: tabular-nums; }
-  .doc-totals td.num { text-align: right; color: var(--ink); font-weight: 600; }
-  .doc-totals .grand td { border-top: 2px solid var(--ink); padding-top: 10px; font-size: 16px; font-weight: 800; color: var(--ink); }
-  .doc-totals .grand td.num { color: var(--accent-strong); }
-  .doc-pay { margin-top: 22px; border: 1px solid var(--border); border-left: 3px solid var(--accent);
-    border-radius: 8px; padding: 13px 16px; }
-  .doc-pay .l { font-size: 10.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 6px; }
-  .doc-pay .row { font-size: 13px; font-weight: 500; display: flex; justify-content: space-between; gap: 10px; padding: 2px 0; color: var(--ink-2); }
-  .doc-pay .row b { font-weight: 700; color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; }
-  .doc-note { margin-top: 12px; background: var(--bg); border-radius: 8px; padding: 11px 16px; }
-  .doc-note .l { font-size: 10.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 3px; }
-  .doc-note div { font-size: 13px; font-weight: 500; white-space: pre-line; color: var(--ink-2); }
-  .doc-foot { margin-top: 26px; text-align: center; font-size: 12px; color: var(--ink-3); font-weight: 500; }
-  .doc-foot .main { color: var(--ink-2); font-weight: 600; font-size: 13px; }
+  .doc-table td { padding: 10px 8px; font-size: 13px; border-bottom: 1px solid var(--line); }
+  .doc-table td:first-child { font-weight: 500; }
+  .doc-table td.num { font-family: var(--disp); }
+  .empty-hint { text-align: center; color: var(--ink-3); padding: 22px 10px; font-size: 13px; }
+  .doc-bottom { display: flex; gap: 18px; margin-top: 16px; align-items: flex-start; }
+  .doc-side { flex: 1; min-width: 0; }
+  .doc-totals { flex: 0 0 auto; min-width: 220px; margin-left: auto; }
+  .doc-totals table { width: 100%; border-collapse: collapse; }
+  .doc-totals td { padding: 5px 8px; font-size: 13px; color: var(--ink-2); }
+  .doc-totals td.num { text-align: right; color: var(--ink); font-family: var(--disp); }
+  .doc-totals .grand td { background: var(--accent-soft); font-weight: 700; color: var(--accent-text); padding: 9px 8px; font-size: 14.5px; }
+  .doc-totals .grand td:first-child { border-radius: 8px 0 0 8px; }
+  .doc-totals .grand td:last-child { border-radius: 0 8px 8px 0; }
+  .doc-pay { border: 1px dashed var(--line-2); border-radius: 8px; padding: 11px 13px; }
+  .doc-pay .l { font-size: 9.5px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 5px; }
+  .doc-pay .row { font-size: 12.5px; display: flex; justify-content: space-between; gap: 10px; padding: 1.5px 0; color: var(--ink-2); }
+  .doc-pay .row b { font-weight: 600; color: var(--ink); text-align: right; font-family: var(--disp); }
+  .doc-note { margin-top: 10px; font-size: 12.5px; color: var(--ink-2); white-space: pre-line; }
+  .doc-note .l { font-size: 9.5px; font-weight: 600; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 2px; }
+  .doc-foot { margin-top: 20px; padding-top: 12px; border-top: 1px solid var(--line); display: flex;
+    justify-content: space-between; gap: 12px; font-size: 11px; color: var(--ink-3); }
+  .doc-foot .main { color: var(--ink-2); font-weight: 500; }
 
-  /* ===== 8x8cm package label (offscreen, b/w thermal) ===== */
+  /* ======================= 8x8cm label (offscreen, thermal b/w) ======================= */
   .label { position: fixed; left: -10000px; top: 0; width: 640px; height: 640px; background: #fff; color: #000;
     font-family: 'Inter', sans-serif; display: flex; flex-direction: column; padding: 22px; }
   .label .frame { border: 3px solid #000; flex: 1; display: flex; flex-direction: column; padding: 18px 24px; min-height: 0; }
   .label .lbl-head { display: flex; justify-content: space-between; align-items: baseline; gap: 14px;
     border-bottom: 3px solid #000; padding-bottom: 10px; }
-  .label .lbl-biz { font-weight: 800; font-size: 30px; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; }
-  .label .lbl-tag { font-weight: 700; font-size: 13px; letter-spacing: .18em; text-transform: uppercase; flex: 0 0 auto; }
-  .label .lbl-ship { font-weight: 800; font-size: 15px; letter-spacing: .22em; margin: 12px 0 8px; }
+  .label .lbl-biz { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 30px; white-space: nowrap; overflow: hidden; }
+  .label .lbl-tag { font-weight: 600; font-size: 13px; letter-spacing: .18em; text-transform: uppercase; flex: 0 0 auto; }
+  .label .lbl-ship { font-weight: 700; font-size: 15px; letter-spacing: .22em; margin: 12px 0 8px; }
   .label .lbl-row { display: flex; align-items: baseline; gap: 10px; margin-bottom: 11px; }
-  .label .lbl-k { font-weight: 700; font-size: 15px; width: 76px; flex: 0 0 auto; text-transform: uppercase; letter-spacing: .04em; }
-  .label .lbl-line { flex: 1; border-bottom: 1.5px solid #000; min-height: 26px; font-size: 18px; font-weight: 600;
+  .label .lbl-k { font-weight: 600; font-size: 15px; width: 76px; flex: 0 0 auto; text-transform: uppercase; letter-spacing: .04em; }
+  .label .lbl-line { flex: 1; border-bottom: 1.5px solid #000; min-height: 26px; font-size: 18px; font-weight: 500;
     line-height: 24px; padding: 0 2px 3px; white-space: nowrap; overflow: hidden; }
   .label .lbl-2 { white-space: normal; max-height: 53px; min-height: 26px; }
   .label .lbl-cols { display: flex; gap: 22px; }
   .label .lbl-cols .lbl-row { flex: 1; }
   .label .lbl-items { flex: 1; min-height: 0; overflow: hidden; border-top: 2px solid #000; padding-top: 6px; }
   .label .lbl-item { display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
-    border-bottom: 1px dashed #000; padding: 4px 2px; font-size: 16px; font-weight: 600; }
+    border-bottom: 1px dashed #000; padding: 4px 2px; font-size: 16px; font-weight: 500; }
   .label .lbl-item .n { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-  .label .lbl-item .q { flex: 0 0 auto; font-weight: 800; }
+  .label .lbl-item .q { flex: 0 0 auto; font-weight: 700; }
   .label .lbl-items.sz-m .lbl-item { font-size: 14px; padding: 3px 2px; }
   .label .lbl-items.sz-s .lbl-item { font-size: 12px; padding: 2px; }
   .label .lbl-items.cols2 { display: grid; grid-template-columns: 1fr 1fr; column-gap: 18px; align-content: start; }
   .label .lbl-item.blank { min-height: 26px; }
-  .label .lbl-foot { background: #000; color: #fff; font-weight: 700; font-size: 14px; text-align: center;
+  .label .lbl-foot { background: #000; color: #fff; font-weight: 600; font-size: 14px; text-align: center;
     padding: 9px 8px; margin-top: 10px; letter-spacing: .04em; white-space: nowrap; overflow: hidden; }
 
-  /* ===== measurement card (offscreen share image) ===== */
+  /* ======================= measurement card (offscreen) ======================= */
   .mcard { position: fixed; left: -10000px; top: 0; width: 640px; background: #fff; color: #111;
     font-family: 'Inter', sans-serif; padding: 34px 42px; border-top: 6px solid #111; }
-  .mcard .h { font-weight: 800; font-size: 24px; letter-spacing: -.01em; }
-  .mcard .s { font-weight: 700; font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: #666; margin-top: 2px; }
-  .mcard .who { font-size: 20px; font-weight: 700; margin: 16px 0 2px; }
-  .mcard .when { font-size: 13px; font-weight: 500; color: #666; margin-bottom: 14px; }
+  .mcard .h { font-family: 'Space Grotesk', sans-serif; font-weight: 700; font-size: 24px; }
+  .mcard .s { font-weight: 600; font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: #666; margin-top: 2px; }
+  .mcard .who { font-size: 20px; font-weight: 600; margin: 16px 0 2px; }
+  .mcard .when { font-size: 13px; color: #666; margin-bottom: 14px; }
   .mcard .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 34px; }
-  .mcard .mrow { display: flex; justify-content: space-between; border-bottom: 1px solid #ccc; padding: 8px 2px; font-size: 16px; font-weight: 500; }
-  .mcard .mrow b { font-weight: 800; font-variant-numeric: tabular-nums; }
-  .mcard .note { margin-top: 16px; font-size: 14px; font-weight: 500; color: #444; white-space: pre-line; }
+  .mcard .mrow { display: flex; justify-content: space-between; border-bottom: 1px solid #ccc; padding: 8px 2px; font-size: 16px; }
+  .mcard .mrow b { font-weight: 700; font-family: 'Space Grotesk', sans-serif; }
+  .mcard .note { margin-top: 16px; font-size: 14px; color: #444; white-space: pre-line; }
 
-  /* ===== sheets ===== */
-  .overlay { position: fixed; inset: 0; background: rgba(16,18,22,.5); z-index: 50; display: none; }
+  /* ======================= dialogs ======================= */
+  .overlay { position: fixed; inset: 0; background: rgba(10,12,16,.55); z-index: 50; display: none; }
   .overlay.open { display: block; }
-  .sheet { position: fixed; left: 0; right: 0; bottom: 0; max-width: 640px; margin: 0 auto; max-height: 85vh;
-    background: var(--surface); border-radius: 16px 16px 0 0; z-index: 51; display: none; flex-direction: column;
-    padding: 18px 18px calc(18px + env(safe-area-inset-bottom)); box-shadow: var(--shadow-lift); }
+  .sheet { position: fixed; z-index: 51; background: var(--card); display: none; flex-direction: column;
+    left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(520px, calc(100vw - 32px));
+    max-height: min(82vh, 720px); border-radius: 14px; padding: 20px; box-shadow: 0 24px 60px rgba(10,12,16,.3); }
   .sheet.open { display: flex; }
   .sheet-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-  .sheet-head h2 { font-size: 16px; font-weight: 700; }
-  .closer { border: none; background: var(--bg); color: var(--ink-2); width: 32px; height: 32px; border-radius: 8px;
-    font-weight: 600; font-size: 14px; cursor: pointer; }
+  .sheet-head h2 { font-size: 15.5px; font-weight: 600; }
+  .closer { border: none; background: var(--paper); color: var(--ink-2); width: 30px; height: 30px; border-radius: 8px;
+    font-weight: 600; font-size: 13px; cursor: pointer; }
   .sheet-body { overflow-y: auto; -webkit-overflow-scrolling: touch; }
 
-  /* ===== lists ===== */
-  .list-item { display: flex; align-items: center; gap: 12px; border: 1px solid var(--border); border-radius: var(--r);
-    padding: 12px 14px; margin-bottom: 8px; background: var(--surface); }
+  /* ======================= lists / tables ======================= */
+  .list-item { display: flex; align-items: center; gap: 12px; padding: 11px 4px; border-bottom: 1px solid var(--line); }
+  .list-item:last-child { border-bottom: none; }
   .list-item .info { flex: 1; min-width: 0; cursor: pointer; }
-  .list-item .t1 { font-weight: 600; font-size: 14.5px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-  .list-item .t2 { font-size: 12.5px; color: var(--ink-3); font-weight: 500; margin-top: 1px; }
-  .list-item .amt { font-weight: 700; font-size: 14.5px; flex: 0 0 auto; font-variant-numeric: tabular-nums; }
-  .list-item .del { border: none; background: none; color: var(--ink-3); width: 30px; height: 30px; border-radius: 8px;
-    cursor: pointer; font-size: 13px; flex: 0 0 auto; }
-  .list-item .del:hover { background: var(--danger-tint); color: var(--danger); }
-  .list-empty { text-align: center; color: var(--ink-3); font-weight: 500; padding: 32px 10px; font-size: 13.5px; }
-  .tag-no { display: inline-block; font-size: 11px; font-weight: 700; color: var(--accent-ink); background: var(--accent-tint);
-    border-radius: 5px; padding: 2px 7px; font-variant-numeric: tabular-nums; }
+  .list-item .t1 { font-weight: 600; font-size: 13.5px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .list-item .t2 { font-size: 12px; color: var(--ink-3); margin-top: 1px; }
+  .list-item .amt { font-weight: 600; font-size: 13.5px; flex: 0 0 auto; }
+  .list-item .del { border: none; background: none; color: var(--ink-3); width: 28px; height: 28px; border-radius: 6px;
+    cursor: pointer; font-size: 12px; flex: 0 0 auto; }
+  .list-item .del:hover { background: var(--bad-soft); color: var(--bad); }
+  .list-empty { text-align: center; color: var(--ink-3); padding: 34px 10px; font-size: 13px; }
+  .tag-no { display: inline-block; font-family: var(--disp); font-size: 11px; font-weight: 600; color: var(--accent-text);
+    background: var(--accent-soft); border-radius: 5px; padding: 2px 7px; }
+  .cust-badge { width: 32px; height: 32px; border-radius: 8px; background: var(--accent-soft); color: var(--accent-text);
+    display: flex; align-items: center; justify-content: center; font-family: var(--disp); font-weight: 600; font-size: 12px; flex: 0 0 auto; }
 
-  /* ===== stats ===== */
-  .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
-  .stat { border: 1px solid var(--border); border-radius: var(--r); padding: 13px 12px; background: var(--surface); }
-  .stat .v { font-size: 17px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
-  .stat .l { font-size: 10.5px; font-weight: 600; color: var(--ink-3); text-transform: uppercase; letter-spacing: .06em; margin-top: 3px; }
-  .subhead { font-size: 12px; font-weight: 700; color: var(--ink-2); text-transform: uppercase; letter-spacing: .07em; margin: 16px 0 8px; }
-  .rankrow { display: flex; align-items: center; gap: 12px; padding: 10px 4px; border-bottom: 1px solid var(--border); }
+  .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 16px; }
+  .stat { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; }
+  .stat .v { font-size: 19px; font-weight: 700; }
+  .stat .l { font-size: 10.5px; font-weight: 500; color: var(--ink-3); text-transform: uppercase; letter-spacing: .07em; margin-top: 3px; }
+  .subhead { font-size: 11.5px; font-weight: 600; color: var(--ink-2); text-transform: uppercase; letter-spacing: .08em; margin: 14px 0 6px; }
+  .rankrow { display: flex; align-items: center; gap: 12px; padding: 9px 4px; border-bottom: 1px solid var(--line); }
   .rankrow:last-child { border-bottom: none; }
-  .rankrow .rank { font-weight: 700; color: var(--ink-3); font-size: 12px; width: 18px; flex: 0 0 auto; }
-  .rankrow .nm { flex: 1; min-width: 0; font-weight: 600; font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .rankrow .q { font-size: 12px; color: var(--ink-3); font-weight: 500; }
-  .rankrow .rev { font-weight: 700; font-size: 13.5px; font-variant-numeric: tabular-nums; }
-  .bar { height: 4px; background: var(--accent-tint); border-radius: 2px; margin-top: 5px; overflow: hidden; }
+  .rankrow .rank { font-family: var(--disp); font-weight: 600; color: var(--ink-3); font-size: 12px; width: 18px; flex: 0 0 auto; }
+  .rankrow .nm { flex: 1; min-width: 0; font-weight: 500; font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rankrow .q { font-size: 12px; color: var(--ink-3); }
+  .rankrow .rev { font-family: var(--disp); font-weight: 600; font-size: 13px; }
+  .bar { height: 3px; background: var(--line); border-radius: 2px; margin-top: 5px; overflow: hidden; }
   .bar i { display: block; height: 100%; background: var(--accent); border-radius: 2px; }
 
-  /* ===== auth + onboarding ===== */
-  .gate-screen { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; }
-  .gate-screen .product { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
-  .gate-screen .product .mark { width: 34px; height: 34px; font-size: 14px; }
-  .gate-screen .product .n { font-weight: 800; font-size: 19px; letter-spacing: -.02em; }
-  .gate-screen .sub { color: var(--ink-2); font-weight: 500; font-size: 13.5px; margin-bottom: 22px; text-align: center; line-height: 1.5; }
-  .auth-card { width: 100%; max-width: 380px; }
-  .auth-card h2 { font-size: 17px; font-weight: 700; text-transform: none; letter-spacing: -.01em; color: var(--ink); margin-bottom: 16px; }
-  .code-note { margin-top: 12px; padding: 12px 14px; background: var(--warn-tint); border-radius: var(--r);
-    font-weight: 500; font-size: 13px; color: var(--warn-ink); display: none; }
-  .code-note.show { display: block; }
-  .code-note .big { font-size: 24px; letter-spacing: 8px; color: var(--ink); font-weight: 800; font-variant-numeric: tabular-nums; }
-  .err { color: var(--danger); font-weight: 600; font-size: 13px; min-height: 18px; margin-top: 8px; }
+  .catrow { display: grid; grid-template-columns: 1fr 104px 30px; gap: 8px; margin-bottom: 8px; align-items: center; }
+  .catrow input { min-height: 38px; padding: 7px 10px; font-size: 13.5px; }
+  .catrow button { border: none; background: none; color: var(--ink-3); width: 28px; height: 28px; border-radius: 6px; cursor: pointer; }
+  .catrow button:hover { background: var(--bad-soft); color: var(--bad); }
 
-  .steps { display: flex; gap: 5px; margin-bottom: 18px; }
-  .steps span { flex: 1; height: 4px; border-radius: 2px; background: var(--border); }
-  .steps span.on { background: var(--accent); }
-  .ob-title { font-size: 19px; font-weight: 800; letter-spacing: -.02em; margin-bottom: 4px; }
-  .ob-sub { color: var(--ink-2); font-size: 13.5px; font-weight: 500; margin-bottom: 16px; }
-  .cat-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
-  .cat-card { border: 1px solid var(--border-strong); border-radius: var(--r); padding: 13px 14px; cursor: pointer;
-    background: var(--surface); text-align: left; font-family: inherit; display: flex; align-items: center; gap: 12px; }
-  .cat-card .ic { width: 36px; height: 36px; border-radius: 8px; background: var(--bg); border: 1px solid var(--border);
-    display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; color: var(--ink-2); flex: 0 0 auto; }
-  .cat-card .nm { font-weight: 700; font-size: 14.5px; }
-  .cat-card .d { font-size: 12px; color: var(--ink-3); font-weight: 500; margin-top: 1px; }
-  .cat-card.active { border-color: var(--accent); background: var(--accent-tint); }
-  .cat-card.active .ic { background: var(--accent); border-color: var(--accent); color: #fff; }
-  .theme-chips { display: flex; gap: 10px; flex-wrap: wrap; }
-  .theme-chip { width: 38px; height: 38px; border-radius: 10px; cursor: pointer; border: 2px solid transparent; outline: 2px solid transparent; outline-offset: 2px; }
+  .theme-chips { display: flex; gap: 9px; flex-wrap: wrap; }
+  .theme-chip { width: 34px; height: 34px; border-radius: 9px; cursor: pointer; border: none;
+    outline: 2px solid transparent; outline-offset: 2px; }
   .theme-chip.active { outline-color: var(--ink); }
 
-  .catrow { display: grid; grid-template-columns: 1fr 108px 32px; gap: 8px; margin-bottom: 8px; align-items: center; }
-  .catrow input { min-height: 42px; padding: 8px 12px; font-size: 14px; }
-  .catrow button { border: none; background: none; color: var(--ink-3); width: 30px; height: 30px; border-radius: 8px; cursor: pointer; }
-  .catrow button:hover { background: var(--danger-tint); color: var(--danger); }
+  .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+  .settings-grid .card { margin-bottom: 0; }
+  .settings-grid .span2 { grid-column: 1 / -1; }
 
-  .toast { position: fixed; bottom: calc(126px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%);
-    background: var(--ink); color: #fff; font-weight: 600; font-size: 13.5px; padding: 10px 18px; border-radius: var(--r);
-    z-index: 99; opacity: 0; transition: opacity .2s; pointer-events: none; max-width: 90vw; text-align: center; }
+  .toast { position: fixed; bottom: 24px; right: 24px; background: var(--shell); color: #fff; font-weight: 500;
+    font-size: 13px; padding: 11px 16px; border-radius: 10px; z-index: 99; opacity: 0; transition: opacity .2s;
+    pointer-events: none; max-width: 340px; box-shadow: 0 10px 30px rgba(10,12,16,.3); }
   .toast.show { opacity: 1; }
+
+  /* ======================= auth / onboarding (dark stage) ======================= */
+  .stage { min-height: 100vh; background: var(--shell); display: flex; flex-direction: column; align-items: center;
+    justify-content: center; padding: 24px; }
+  .stage .wordmark { display: flex; align-items: center; gap: 10px; margin-bottom: 22px; color: var(--shell-bright); }
+  .stage .wordmark .glyph { width: 34px; height: 34px; border-radius: 9px; background: var(--accent); color: #fff;
+    display: flex; align-items: center; justify-content: center; font-family: var(--disp); font-weight: 700; font-size: 14px; }
+  .stage .wordmark .t { font-family: var(--disp); font-weight: 700; font-size: 18px; }
+  .stage-card { background: var(--card); border-radius: 16px; padding: 26px; width: 100%; max-width: 400px;
+    box-shadow: 0 24px 70px rgba(0,0,0,.45); }
+  .stage-card h2 { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+  .stage-card .sub { color: var(--ink-2); font-size: 13px; margin-bottom: 18px; }
+  .stage-note { color: var(--shell-text); font-size: 12px; margin-top: 14px; text-align: center; }
+  .code-note { margin-top: 12px; padding: 11px 13px; background: var(--note-soft); border-radius: 8px;
+    font-size: 12.5px; color: var(--note-ink); display: none; }
+  .code-note.show { display: block; }
+  .code-note .big { font-family: var(--disp); font-size: 23px; letter-spacing: 7px; color: var(--ink); font-weight: 700; }
+  .err { color: var(--bad); font-weight: 500; font-size: 12.5px; min-height: 17px; margin-top: 8px; }
+
+  .ob-card { max-width: 560px; }
+  .steps { display: flex; gap: 5px; margin-bottom: 18px; }
+  .steps span { flex: 1; height: 3px; border-radius: 2px; background: var(--line); }
+  .steps span.on { background: var(--accent); }
+  .cat-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
+  .cat-card { border: 1px solid var(--line-2); border-radius: 10px; padding: 12px 14px; cursor: pointer;
+    background: var(--card); text-align: left; font-family: inherit; display: flex; align-items: center; gap: 12px; }
+  .cat-card .ic { width: 34px; height: 34px; border-radius: 8px; background: var(--paper); border: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: center; font-family: var(--disp); font-weight: 700;
+    font-size: 13px; color: var(--ink-2); flex: 0 0 auto; }
+  .cat-card .nm { font-weight: 600; font-size: 14px; }
+  .cat-card .d { font-size: 12px; color: var(--ink-3); margin-top: 1px; }
+  .cat-card.active { border-color: var(--accent); background: var(--accent-soft); }
+  .cat-card.active .ic { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+  /* ======================= responsive: tablet / phone ======================= */
+  @media (max-width: 980px) {
+    .workgrid { grid-template-columns: 1fr; }
+    .col-preview { position: static; }
+    .settings-grid { grid-template-columns: 1fr; }
+    .stat-grid { grid-template-columns: repeat(2, 1fr); }
+  }
+  @media (max-width: 760px) {
+    .shell { flex-direction: column; }
+    .side { width: 100%; height: auto; position: fixed; left: 0; right: 0; bottom: 0; top: auto; z-index: 30;
+      flex-direction: row; align-items: center; border-top: 1px solid var(--shell-line);
+      padding-bottom: env(safe-area-inset-bottom); }
+    .side-brand, .side-biz, .side-foot { display: none; }
+    .nav { flex-direction: row; width: 100%; padding: 4px 6px; gap: 0; }
+    .nav button { flex-direction: column; gap: 3px; font-size: 9.5px; padding: 7px 2px; justify-content: center;
+      align-items: center; text-align: center; border-radius: 8px; }
+    .nav button.active { box-shadow: none; background: none; color: var(--accent); }
+    .nav button svg { width: 20px; height: 20px; }
+    .main { padding-bottom: 86px; }
+    .main-head { padding: 16px 16px 0; }
+    .main-body { padding: 12px 16px 30px; }
+    .actionbar { position: sticky; bottom: calc(64px + env(safe-area-inset-bottom)); z-index: 25;
+      box-shadow: 0 6px 24px rgba(10,12,16,.14); flex-wrap: wrap; }
+    .actionbar .total { flex: 1 1 100%; margin-right: 0; display: flex; align-items: baseline; gap: 8px; }
+    .actionbar .btn { flex: 1; padding: 10px 4px; }
+    .sheet { left: 0; right: 0; bottom: 0; top: auto; transform: none; width: 100%; max-width: none;
+      border-radius: 16px 16px 0 0; max-height: 85vh; padding-bottom: calc(20px + env(safe-area-inset-bottom)); }
+  }
 </style>
 </head>
 <body>
 
 <!-- ============ AUTH ============ -->
-<div id="authView" class="gate-screen hidden">
-  <div class="product"><div class="mark">In</div><div class="n">Invoice App</div></div>
-  <div class="sub">Branded invoices, package labels and customer records<br>for your business — from any device.</div>
-  <div class="card auth-card">
+<div id="authView" class="stage hidden">
+  <div class="wordmark"><div class="glyph">In</div><div class="t">Invoice App</div></div>
+  <div class="stage-card">
     <div id="authStep1">
       <h2>Sign in</h2>
+      <div class="sub">Branded invoices, package labels and customer records for your business.</div>
       <div class="field"><label for="authEmail">Email address</label>
         <input type="email" id="authEmail" placeholder="you@example.com" autocomplete="email"></div>
       <button class="btn btn-primary" id="authSend">Continue</button>
     </div>
     <div id="authStep2" class="hidden">
-      <h2>Check your email</h2>
-      <div class="field"><label for="authCode">6-digit code sent to <span id="authEmailEcho"></span></label>
-        <input type="tel" id="authCode" placeholder="000000" maxlength="6" inputmode="numeric" autocomplete="one-time-code"></div>
+      <h2>Enter your code</h2>
+      <div class="sub">We sent a 6-digit code to <b id="authEmailEcho"></b></div>
+      <div class="field">
+        <input type="tel" id="authCode" placeholder="000000" maxlength="6" inputmode="numeric" autocomplete="one-time-code" style="font-family:var(--disp);letter-spacing:6px;text-align:center;font-size:18px"></div>
       <button class="btn btn-primary" id="authVerify">Sign in</button>
       <div class="code-note" id="devCodeNote">No email service is configured, so here is your code:<br><span class="big" id="devCode"></span></div>
       <button class="btn btn-ghost" id="authBack" style="width:100%;margin-top:10px">Use a different email</button>
     </div>
     <div class="err" id="authErr"></div>
   </div>
-  <div class="muted" style="margin-top:10px">You stay signed in on this device until you sign out.</div>
+  <div class="stage-note">You stay signed in on this device until you sign out.</div>
 </div>
 
 <!-- ============ ONBOARDING ============ -->
-<div id="onboardView" class="hidden">
-  <div class="wrap" style="padding-bottom:24px">
-    <div class="card">
-      <div class="steps"><span id="st1"></span><span id="st2"></span><span id="st3"></span></div>
+<div id="onboardView" class="stage hidden">
+  <div class="wordmark"><div class="glyph">In</div><div class="t">Invoice App</div></div>
+  <div class="stage-card ob-card">
+    <div class="steps"><span id="st1"></span><span id="st2"></span><span id="st3"></span></div>
 
-      <div id="obStep1">
-        <div class="ob-title">What kind of business do you run?</div>
-        <div class="ob-sub">This sets up your starter catalogue and tools. Everything can be changed later.</div>
-        <div class="cat-grid" id="catGrid"></div>
-        <button class="btn btn-primary" id="obNext1" style="margin-top:16px" disabled>Continue</button>
-      </div>
+    <div id="obStep1">
+      <h2>What kind of business do you run?</h2>
+      <div class="sub">This sets up your starter catalogue and tools. Everything can be changed later.</div>
+      <div class="cat-grid" id="catGrid"></div>
+      <button class="btn btn-primary" id="obNext1" style="margin-top:16px" disabled>Continue</button>
+    </div>
 
-      <div id="obStep2" class="hidden">
-        <div class="ob-title">Your brand</div>
-        <div class="ob-sub">This appears on every invoice and label you send.</div>
-        <div class="field"><label>Business name *</label><input type="text" id="obName" maxlength="60" placeholder="e.g. Bella Stitches"></div>
-        <div class="field"><label>Tagline (optional)</label><input type="text" id="obSlogan" maxlength="80" placeholder="e.g. Made to measure"></div>
-        <div class="row2">
-          <div class="field"><label>Phone</label><input type="tel" id="obPhone" placeholder="080..."></div>
-          <div class="field"><label>Social handle</label><input type="text" id="obSocial" placeholder="@yourbrand"></div>
-        </div>
-        <div class="field"><label>Accent colour</label><div class="theme-chips" id="obThemes"></div></div>
-        <button class="btn btn-primary" id="obNext2" style="margin-top:6px">Continue</button>
-        <button class="btn btn-ghost" id="obBack2" style="width:100%;margin-top:10px">Back</button>
+    <div id="obStep2" class="hidden">
+      <h2>Your brand</h2>
+      <div class="sub">Shown on every invoice and label you send.</div>
+      <div class="field"><label>Business name *</label><input type="text" id="obName" maxlength="60" placeholder="e.g. Bella Stitches"></div>
+      <div class="field"><label>Tagline (optional)</label><input type="text" id="obSlogan" maxlength="80" placeholder="e.g. Made to measure"></div>
+      <div class="row2">
+        <div class="field"><label>Phone</label><input type="tel" id="obPhone" placeholder="080..."></div>
+        <div class="field"><label>Social handle</label><input type="text" id="obSocial" placeholder="@yourbrand"></div>
       </div>
+      <div class="field"><label>Accent colour</label><div class="theme-chips" id="obThemes"></div></div>
+      <button class="btn btn-primary" id="obNext2" style="margin-top:6px">Continue</button>
+      <button class="btn btn-ghost" id="obBack2" style="width:100%;margin-top:10px">Back</button>
+    </div>
 
-      <div id="obStep3" class="hidden">
-        <div class="ob-title">Payments &amp; catalogue</div>
-        <div class="ob-sub">Bank details shown on invoices, and the items you sell.</div>
-        <div class="field"><label>Account name</label><input type="text" id="obAcctName" placeholder="Business account name"></div>
-        <div class="row2">
-          <div class="field"><label>Bank</label><input type="text" id="obBank" placeholder="e.g. Moniepoint"></div>
-          <div class="field"><label>Account number</label><input type="tel" id="obAcctNo" placeholder="0000000000"></div>
-        </div>
-        <div class="field"><label>Invoice number prefix</label><input type="text" id="obPrefix" maxlength="6" placeholder="e.g. BS" style="text-transform:uppercase"></div>
-        <label style="margin-top:16px">Starter catalogue — items and usual prices</label>
-        <div id="obCat"></div>
-        <button class="btn btn-add" id="obCatAdd" style="min-height:42px">+ Add item</button>
-        <button class="btn btn-primary" id="obFinish" style="margin-top:16px">Finish setup</button>
-        <button class="btn btn-ghost" id="obBack3" style="width:100%;margin-top:10px">Back</button>
-        <div class="err" id="obErr"></div>
+    <div id="obStep3" class="hidden">
+      <h2>Payments &amp; catalogue</h2>
+      <div class="sub">Bank details shown on invoices, and the items you sell.</div>
+      <div class="field"><label>Account name</label><input type="text" id="obAcctName" placeholder="Business account name"></div>
+      <div class="row2">
+        <div class="field"><label>Bank</label><input type="text" id="obBank" placeholder="e.g. Moniepoint"></div>
+        <div class="field"><label>Account number</label><input type="tel" id="obAcctNo" placeholder="0000000000"></div>
       </div>
+      <div class="field"><label>Invoice number prefix</label><input type="text" id="obPrefix" maxlength="6" placeholder="e.g. BS" style="text-transform:uppercase"></div>
+      <label style="margin-top:14px">Starter catalogue — items and usual prices</label>
+      <div id="obCat"></div>
+      <button class="btn btn-add" id="obCatAdd">+ Add item</button>
+      <button class="btn btn-primary" id="obFinish" style="margin-top:14px">Finish setup</button>
+      <button class="btn btn-ghost" id="obBack3" style="width:100%;margin-top:10px">Back</button>
+      <div class="err" id="obErr"></div>
     </div>
   </div>
 </div>
 
 <!-- ============ MAIN APP ============ -->
-<div id="appView" class="hidden">
-  <div class="appbar">
-    <div class="mark" id="bizAvatar">?</div>
-    <div class="biz">
-      <div class="n" id="bizName">—</div>
-      <div class="s" id="bizSlogan"></div>
+<div id="appView" class="shell hidden">
+  <aside class="side">
+    <div class="side-brand"><div class="glyph">In</div><div class="t">Invoice App</div></div>
+    <div class="side-biz">
+      <div class="avatar" id="bizAvatar">?</div>
+      <div style="min-width:0">
+        <div class="n" id="bizName">—</div>
+        <div class="s" id="bizSlogan"></div>
+      </div>
     </div>
-  </div>
+    <nav class="nav">
+      <button data-tab="invoice" class="active">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7"><path d="M7 3h10a1 1 0 0 1 1 1v17l-3-2-3 2-3-2-3 2V4a1 1 0 0 1 1-1z"/><path d="M9 8h6M9 12h6"/></svg><span>New invoice</span></button>
+      <button data-tab="customers">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3 2.8-4.5 5.5-4.5S13.9 16 14.5 19"/><circle cx="16.5" cy="9.5" r="2.5"/><path d="M16 14.7c2.3.2 4 1.6 4.5 4.3"/></svg><span>Customers</span></button>
+      <button data-tab="history">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.5 2"/></svg><span>History</span></button>
+      <button data-tab="sales">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7"><path d="M4 20h16"/><path d="M6 20v-6M11 20V9M16 20v-10M21 20V5" transform="translate(-1.5)"/></svg><span>Sales</span></button>
+      <button data-tab="settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke-width="1.7"><circle cx="12" cy="12" r="3"/><path d="M12 3.5v2.6M12 17.9v2.6M3.5 12h2.6M17.9 12h2.6M6 6l1.9 1.9M16.1 16.1 18 18M18 6l-1.9 1.9M7.9 16.1 6 18"/></svg><span>Settings</span></button>
+    </nav>
+    <div class="side-foot">
+      <div class="em" id="whoami"></div>
+      <div style="margin-top:4px"><a id="adminLink" class="hidden" href="/admin">Admin panel</a></div>
+    </div>
+  </aside>
 
-  <!-- TAB: invoice -->
-  <div class="wrap" id="tab-invoice">
-    <div class="card form-panel">
-      <div class="section">
-        <h2>Customer</h2>
-        <div class="field"><label for="custName">Name</label>
-          <input type="text" id="custName" placeholder="Customer name" autocomplete="off" list="custList">
-          <datalist id="custList"></datalist></div>
-        <div class="field"><label for="custPhone">WhatsApp / phone (optional)</label>
-          <input type="tel" id="custPhone" placeholder="080..." inputmode="tel" autocomplete="off"></div>
-        <div class="field"><label for="custAddr">Delivery address (used on the package label)</label>
-          <textarea id="custAddr" rows="2" placeholder="Street, area, city"></textarea></div>
-      </div>
-      <div class="section">
-        <h2>Items</h2>
-        <div id="items"></div>
-        <button class="btn btn-add" id="addItem">+ Add another item</button>
-      </div>
-      <div class="section">
-        <h2>Charges</h2>
-        <div class="row2">
-          <div class="field"><label for="delivery">Delivery fee</label>
-            <input type="number" id="delivery" min="0" placeholder="0" inputmode="numeric"></div>
-          <div class="field"><label for="discount">Discount</label>
-            <input type="number" id="discount" min="0" placeholder="0" inputmode="numeric"></div>
+  <main class="main">
+    <div class="main-head"><h1 id="pageTitle">New invoice</h1></div>
+    <div class="main-body">
+
+      <!-- TAB: invoice -->
+      <div id="tab-invoice">
+        <div class="workgrid">
+          <section>
+            <div class="card form-panel">
+              <h2>Customer</h2>
+              <div class="field"><label for="custName">Name</label>
+                <input type="text" id="custName" placeholder="Customer name" autocomplete="off" list="custList">
+                <datalist id="custList"></datalist></div>
+              <div class="row2">
+                <div class="field"><label for="custPhone">WhatsApp / phone</label>
+                  <input type="tel" id="custPhone" placeholder="080..." inputmode="tel" autocomplete="off"></div>
+                <div class="field"><label for="delivery">Delivery fee</label>
+                  <input type="number" id="delivery" min="0" placeholder="0" inputmode="numeric"></div>
+              </div>
+              <div class="field"><label for="custAddr">Delivery address (used on the package label)</label>
+                <textarea id="custAddr" rows="2" placeholder="Street, area, city"></textarea></div>
+            </div>
+            <div class="card">
+              <h2>Items</h2>
+              <div id="items"></div>
+              <button class="btn btn-add" id="addItem">+ Add another item</button>
+            </div>
+            <div class="card">
+              <h2>Finishing touches</h2>
+              <div class="row2">
+                <div class="field"><label for="discount">Discount</label>
+                  <input type="number" id="discount" min="0" placeholder="0" inputmode="numeric"></div>
+                <div class="field"><label for="notes">Note</label>
+                  <input type="text" id="notes" placeholder="e.g. Delivery on Friday"></div>
+              </div>
+              <button class="btn btn-ghost" id="newBtn" style="width:100%">Start a new invoice</button>
+            </div>
+          </section>
+
+          <section class="col-preview">
+            <div class="actionbar">
+              <div class="total"><div class="l">Total</div><div class="v" id="dockTotal">0</div></div>
+              <button class="btn b-pdf" id="printBtn">PDF</button>
+              <button class="btn b-img" id="imgBtn">Image</button>
+              <button class="btn b-lbl" id="labelBtn">Label</button>
+              <button class="btn b-wa" id="waBtn">WhatsApp</button>
+            </div>
+            <div class="doc" id="invoice">
+              <div class="doc-band"></div>
+              <div class="doc-inner">
+                <div class="doc-top">
+                  <div class="doc-brand">
+                    <div class="n" id="invBizName">—</div>
+                    <div class="s" id="invBizSlogan"></div>
+                    <div class="c" id="invBizContact"></div>
+                  </div>
+                  <div class="doc-meta">
+                    <div class="t" id="invTitle">Invoice</div>
+                    <div class="no" id="invNo">—</div>
+                    <div class="d" id="invDate"></div>
+                  </div>
+                </div>
+                <div class="doc-to">
+                  <div class="l">Billed to</div>
+                  <div class="who" id="invCust">—</div>
+                  <div class="ph" id="invPhone"></div>
+                </div>
+                <table class="doc-table">
+                  <thead><tr><th>Item</th><th class="ctr">Qty</th><th class="num">Price</th><th class="num">Amount</th></tr></thead>
+                  <tbody id="invRows"></tbody>
+                </table>
+                <div class="doc-bottom">
+                  <div class="doc-side">
+                    <div class="doc-pay" id="invPayBox" style="display:none">
+                      <div class="l">Payment details</div>
+                      <div id="invPayRows"></div>
+                    </div>
+                    <div class="doc-note" id="invNotesBox" style="display:none">
+                      <div class="l">Note</div><div id="invNotes"></div>
+                    </div>
+                  </div>
+                  <div class="doc-totals"><table><tbody id="invTotals"></tbody></table></div>
+                </div>
+                <div class="doc-foot"><div class="main" id="invFootMain"></div><div id="invFootSub"></div></div>
+              </div>
+            </div>
+          </section>
         </div>
-        <div class="field"><label for="notes">Note (optional)</label>
-          <textarea id="notes" rows="2" placeholder="e.g. Delivery on Friday"></textarea></div>
-        <button class="btn btn-ghost" id="newBtn">Start a new invoice</button>
       </div>
-    </div>
 
-    <div class="doc" id="invoice">
-      <div class="doc-inner">
-        <div class="doc-top">
-          <div class="doc-brand">
-            <div class="mark" id="invAvatar">?</div>
-            <div>
-              <div class="n" id="invBizName">—</div>
-              <div class="s" id="invBizSlogan"></div>
-              <div class="c" id="invBizContact"></div>
+      <!-- TAB: customers -->
+      <div id="tab-customers" class="hidden">
+        <div class="card" style="max-width:720px">
+          <div class="row2" style="grid-template-columns:1fr auto;align-items:end;margin-bottom:6px">
+            <div class="field" style="margin-bottom:0"><input type="text" id="custSearch" placeholder="Search name or phone"></div>
+            <button class="btn btn-ghost" id="custAdd" style="min-height:40px">+ Add customer</button>
+          </div>
+          <div id="custListView"></div>
+        </div>
+      </div>
+
+      <!-- TAB: history -->
+      <div id="tab-history" class="hidden">
+        <div class="card" style="max-width:720px"><div id="histList"></div></div>
+      </div>
+
+      <!-- TAB: sales -->
+      <div id="tab-sales" class="hidden">
+        <div style="max-width:860px">
+          <div id="salesContent"></div>
+        </div>
+      </div>
+
+      <!-- TAB: settings -->
+      <div id="tab-settings" class="hidden">
+        <div class="settings-grid" style="max-width:960px">
+          <div class="card">
+            <h2>Brand</h2>
+            <div class="field"><label>Business name</label><input type="text" id="setName" maxlength="60"></div>
+            <div class="field"><label>Tagline</label><input type="text" id="setSlogan" maxlength="80"></div>
+            <div class="row2">
+              <div class="field"><label>Phone</label><input type="tel" id="setPhone"></div>
+              <div class="field"><label>Social handle</label><input type="text" id="setSocial"></div>
+            </div>
+            <div class="row2">
+              <div class="field"><label>Invoice prefix</label><input type="text" id="setPrefix" maxlength="6" style="text-transform:uppercase"></div>
+              <div class="field"><label>WhatsApp country code</label><input type="tel" id="setDial" maxlength="4" placeholder="234"></div>
+            </div>
+            <div class="field"><label>Invoice footer line</label><input type="text" id="setFooter" maxlength="200" placeholder="e.g. Call or DM to order · Nationwide delivery"></div>
+            <div class="field"><label>Accent colour</label><div class="theme-chips" id="setThemes"></div></div>
+          </div>
+          <div>
+            <div class="card">
+              <h2>Payment details</h2>
+              <div class="field"><label>Account name</label><input type="text" id="setAcctName"></div>
+              <div class="row2">
+                <div class="field"><label>Bank</label><input type="text" id="setBank"></div>
+                <div class="field"><label>Account number</label><input type="tel" id="setAcctNo"></div>
+              </div>
+            </div>
+            <div class="card" id="tplPanel">
+              <h2>Measurement templates</h2>
+              <div class="muted" style="margin-bottom:10px">Field lists used when recording a client's measurements.</div>
+              <div id="tplList"></div>
+              <button class="btn btn-add" id="tplAdd">+ New template</button>
             </div>
           </div>
-          <div class="doc-meta">
-            <div class="t" id="invTitle">Invoice</div>
-            <div class="no" id="invNo">—</div>
-            <div class="d" id="invDate"></div>
+          <div class="card span2">
+            <h2>Catalogue &amp; prices</h2>
+            <div class="muted" style="margin-bottom:10px">These power the item dropdown and quick-price buttons.</div>
+            <div id="setCat"></div>
+            <button class="btn btn-add" id="setCatAdd">+ Add item</button>
+          </div>
+          <div class="card span2">
+            <button class="btn btn-primary" id="setSave" style="max-width:280px">Save settings</button>
+            <div style="display:flex;gap:10px;margin-top:12px;flex-wrap:wrap">
+              <button class="btn btn-ghost" id="signOut">Sign out on this device</button>
+              <button class="btn btn-ghost" id="signOutAll">Sign out everywhere</button>
+            </div>
           </div>
         </div>
-        <div class="doc-rule"></div>
-        <div class="doc-to">
-          <div class="l">Billed to</div>
-          <div class="who" id="invCust">—</div>
-          <div class="ph" id="invPhone"></div>
-        </div>
-        <table class="doc-table">
-          <thead><tr><th>Item</th><th class="ctr">Qty</th><th class="num">Price</th><th class="num">Amount</th></tr></thead>
-          <tbody id="invRows"></tbody>
-        </table>
-        <div class="doc-totals"><table><tbody id="invTotals"></tbody></table></div>
-        <div class="doc-pay" id="invPayBox" style="display:none">
-          <div class="l">Payment details</div>
-          <div id="invPayRows"></div>
-        </div>
-        <div class="doc-note" id="invNotesBox" style="display:none">
-          <div class="l">Note</div><div id="invNotes"></div>
-        </div>
-        <div class="doc-foot"><div class="main" id="invFootMain"></div><div id="invFootSub"></div></div>
       </div>
-    </div>
-  </div>
 
-  <!-- TAB: customers -->
-  <div class="wrap hidden" id="tab-customers">
-    <div class="card">
-      <h2>Customers</h2>
-      <div class="field"><input type="text" id="custSearch" placeholder="Search name or phone"></div>
-      <button class="btn btn-add" id="custAdd" style="min-height:42px;margin-bottom:12px">+ Add customer</button>
-      <div id="custListView"></div>
     </div>
-  </div>
-
-  <!-- TAB: history -->
-  <div class="wrap hidden" id="tab-history">
-    <div class="card">
-      <h2>Invoice history</h2>
-      <div id="histList"></div>
-    </div>
-  </div>
-
-  <!-- TAB: sales -->
-  <div class="wrap hidden" id="tab-sales">
-    <div class="card">
-      <h2>Sales</h2>
-      <div id="salesContent"></div>
-    </div>
-  </div>
-
-  <!-- TAB: settings -->
-  <div class="wrap hidden" id="tab-settings">
-    <div class="card">
-      <h2>Brand</h2>
-      <div class="field"><label>Business name</label><input type="text" id="setName" maxlength="60"></div>
-      <div class="field"><label>Tagline</label><input type="text" id="setSlogan" maxlength="80"></div>
-      <div class="row2">
-        <div class="field"><label>Phone</label><input type="tel" id="setPhone"></div>
-        <div class="field"><label>Social handle</label><input type="text" id="setSocial"></div>
-      </div>
-      <div class="row2">
-        <div class="field"><label>Invoice prefix</label><input type="text" id="setPrefix" maxlength="6" style="text-transform:uppercase"></div>
-        <div class="field"><label>WhatsApp country code</label><input type="tel" id="setDial" maxlength="4" placeholder="234"></div>
-      </div>
-      <div class="field"><label>Invoice footer line</label><input type="text" id="setFooter" maxlength="200" placeholder="e.g. Call or DM to order · Nationwide delivery"></div>
-      <div class="field"><label>Accent colour</label><div class="theme-chips" id="setThemes"></div></div>
-    </div>
-    <div class="card">
-      <h2>Payment details</h2>
-      <div class="field"><label>Account name</label><input type="text" id="setAcctName"></div>
-      <div class="row2">
-        <div class="field"><label>Bank</label><input type="text" id="setBank"></div>
-        <div class="field"><label>Account number</label><input type="tel" id="setAcctNo"></div>
-      </div>
-    </div>
-    <div class="card">
-      <h2>Catalogue &amp; prices</h2>
-      <div class="muted" style="margin-bottom:10px">These power the item dropdown and quick-price buttons.</div>
-      <div id="setCat"></div>
-      <button class="btn btn-add" id="setCatAdd" style="min-height:42px">+ Add item</button>
-    </div>
-    <div class="card" id="tplPanel">
-      <h2>Measurement templates</h2>
-      <div class="muted" style="margin-bottom:10px">Field lists used when recording a client's measurements.</div>
-      <div id="tplList"></div>
-      <button class="btn btn-add" id="tplAdd" style="min-height:42px">+ New template</button>
-    </div>
-    <div class="card">
-      <button class="btn btn-primary" id="setSave">Save settings</button>
-      <div id="adminLinkWrap" class="hidden" style="margin-top:12px">
-        <a class="btn btn-ghost" href="/admin" style="display:block;text-align:center;text-decoration:none">Open admin panel</a>
-      </div>
-      <button class="btn btn-ghost" id="signOut" style="width:100%;margin-top:12px">Sign out on this device</button>
-      <button class="btn btn-ghost" id="signOutAll" style="width:100%;margin-top:10px">Sign out everywhere</button>
-      <div class="muted" style="margin-top:12px;text-align:center" id="whoami"></div>
-    </div>
-  </div>
-
-  <!-- dock (invoice tab only) -->
-  <div class="dock" id="dock">
-    <div class="inner">
-      <div class="total"><div class="l">Total</div><div class="v" id="dockTotal">0</div></div>
-      <div class="btns">
-        <button class="btn b-pdf" id="printBtn">PDF</button>
-        <button class="btn b-img" id="imgBtn">Image</button>
-        <button class="btn b-lbl" id="labelBtn">Label</button>
-        <button class="btn b-wa" id="waBtn">WhatsApp</button>
-      </div>
-    </div>
-  </div>
-
-  <div class="tabbar">
-    <button data-tab="invoice" class="active">
-      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M7 3h10a1 1 0 0 1 1 1v17l-3-2-3 2-3-2-3 2V4a1 1 0 0 1 1-1z"/><path d="M9 8h6M9 12h6"/></svg>Invoice</button>
-    <button data-tab="customers">
-      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3 2.8-4.5 5.5-4.5S13.9 16 14.5 19"/><circle cx="16.5" cy="9.5" r="2.5"/><path d="M16 14.7c2.3.2 4 1.6 4.5 4.3"/></svg>Customers</button>
-    <button data-tab="history">
-      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.5 2"/></svg>History</button>
-    <button data-tab="sales">
-      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M4 20h16"/><path d="M6 20v-6M11 20V9M16 20v-10M21 20V5" transform="translate(-1.5)"/></svg>Sales</button>
-    <button data-tab="settings">
-      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 3.5v2.6M12 17.9v2.6M3.5 12h2.6M17.9 12h2.6M6 6l1.9 1.9M16.1 16.1 18 18M18 6l-1.9 1.9M7.9 16.1 6 18"/></svg>Settings</button>
-  </div>
+  </main>
 </div>
 
-<!-- customer detail sheet -->
+<!-- customer detail dialog -->
 <div class="overlay" id="custOverlay"></div>
 <div class="sheet" id="custSheet">
   <div class="sheet-head"><h2 id="custSheetTitle">Customer</h2><button class="closer" id="custSheetClose">✕</button></div>
   <div class="sheet-body" id="custSheetBody"></div>
 </div>
 
-<!-- record entry sheet -->
+<!-- record entry dialog -->
 <div class="overlay" id="recOverlay"></div>
 <div class="sheet" id="recSheet">
   <div class="sheet-head"><h2 id="recSheetTitle">Measurements</h2><button class="closer" id="recSheetClose">✕</button></div>
@@ -623,7 +680,7 @@ async function api(method, url, body) {
 }
 
 const THEMES = ['indigo', 'teal', 'emerald', 'amber', 'crimson', 'slate'];
-const THEME_COLORS = { indigo:'#444ce7', teal:'#0d8a8a', emerald:'#12855c', amber:'#b45309', crimson:'#b42145', slate:'#3d4654' };
+const THEME_COLORS = { indigo:'#4f5df0', teal:'#0f9490', emerald:'#189065', amber:'#c26b10', crimson:'#c62a51', slate:'#49566b' };
 const CAT_META = {
   seller:  { d: 'Clothes, thrift, skincare and more' },
   tailor:  { d: 'Sewing, styles and client measurements' },
@@ -631,6 +688,7 @@ const CAT_META = {
   services:{ d: 'Hair, makeup, lessons, home service' },
   other:   { d: 'Everything else' }
 };
+const TAB_TITLES = { invoice: 'New invoice', customers: 'Customers', history: 'History', sales: 'Sales', settings: 'Settings' };
 
 function themeChips(container, current, onPick) {
   container.innerHTML = '';
@@ -664,6 +722,7 @@ function show(view) {
   $('authView').classList.toggle('hidden', view !== 'auth');
   $('onboardView').classList.toggle('hidden', view !== 'onboard');
   $('appView').classList.toggle('hidden', view !== 'app');
+  document.body.style.background = (view === 'auth' || view === 'onboard') ? 'var(--shell)' : 'var(--paper)';
   if (view === 'onboard') initOnboarding();
 }
 
@@ -766,7 +825,7 @@ function applyBusiness() {
   const b = state.business;
   document.body.dataset.theme = THEMES.includes(b.theme) ? b.theme : 'indigo';
   document.title = b.name + ' — ' + b.docNoun + 's';
-  $('bizAvatar').textContent = $('invAvatar').textContent = initials(b.name);
+  $('bizAvatar').textContent = initials(b.name);
   $('bizName').textContent = $('invBizName').textContent = b.name;
   $('bizSlogan').textContent = $('invBizSlogan').textContent = b.slogan || '';
   $('invBizContact').textContent = [b.contactPhone, b.socialHandle].filter(Boolean).join(' · ');
@@ -788,8 +847,8 @@ function applyBusiness() {
   $('setAcctName').value = p0.account_name || ''; $('setBank').value = p0.bank || ''; $('setAcctNo').value = p0.account_number || '';
   themeChips($('setThemes'), b.theme, t => { state.business.theme = t; document.body.dataset.theme = t; });
   setCatDraw();
-  $('whoami').textContent = 'Signed in as ' + state.user.email;
-  $('adminLinkWrap').classList.toggle('hidden', !state.user.isAdmin);
+  $('whoami').textContent = state.user.email;
+  $('adminLink').classList.toggle('hidden', !state.user.isAdmin);
   $('tplPanel').classList.toggle('hidden', state.business.category !== 'tailor' && !state.templates.length);
 }
 
@@ -885,11 +944,11 @@ function render() {
   $('invRows').innerHTML = items.length
     ? items.map(i => `<tr><td>${esc(i.name)}</td><td class="ctr">${i.qty}</td>
         <td class="num">${fmt(i.price)}</td><td class="num">${fmt(i.amount)}</td></tr>`).join('')
-    : '<tr><td colspan="4"><div class="empty-hint">Add items above to build the ' + esc(state.business.docNoun.toLowerCase()) + '.</div></td></tr>';
+    : '<tr><td colspan="4"><div class="empty-hint">Add items to build the ' + esc(state.business.docNoun.toLowerCase()) + '.</div></td></tr>';
   let t = `<tr><td>Subtotal</td><td class="num">${fmt(subtotal)}</td></tr>`;
   if (delivery) t += `<tr><td>Delivery</td><td class="num">${fmt(delivery)}</td></tr>`;
   if (discount) t += `<tr><td>Discount</td><td class="num">−${fmt(discount)}</td></tr>`;
-  t += `<tr class="grand"><td>Total</td><td class="num">${fmt(total)}</td></tr>`;
+  t += `<tr class="grand"><td>Total due</td><td class="num">${fmt(total)}</td></tr>`;
   $('invTotals').innerHTML = t;
   $('dockTotal').textContent = fmt(total);
   const notes = $('notes').value.trim();
@@ -1028,19 +1087,20 @@ $('waBtn').addEventListener('click', async () => {
   window.open(`https://wa.me/${target}?text=${encodeURIComponent(msg)}`, '_blank');
 });
 
-/* ================= tabs ================= */
-document.querySelectorAll('.tabbar button').forEach(btn => btn.addEventListener('click', () => {
-  document.querySelectorAll('.tabbar button').forEach(b => b.classList.remove('active'));
+/* ================= navigation ================= */
+document.querySelectorAll('.nav [data-tab]').forEach(btn => btn.addEventListener('click', () => {
+  document.querySelectorAll('.nav [data-tab]').forEach(b => b.classList.remove('active'));
   btn.classList.add('active');
   const tab = btn.dataset.tab;
   ['invoice','customers','history','sales','settings'].forEach(t =>
     $('tab-' + t).classList.toggle('hidden', t !== tab));
-  $('dock').classList.toggle('hidden', tab !== 'invoice');
+  $('pageTitle').textContent = TAB_TITLES[tab];
   if (tab === 'history') refreshHistory();
   if (tab === 'sales') refreshSales();
   if (tab === 'customers') refreshCustomers();
   window.scrollTo(0, 0);
 }));
+const goTab = tab => document.querySelector('.nav [data-tab="' + tab + '"]').click();
 
 /* ================= history ================= */
 async function refreshHistory() {
@@ -1079,7 +1139,7 @@ function loadInvoice(no) {
   (s.items || []).forEach(i => addItemRow(false, i));
   if (!s.items || !s.items.length) addItemRow(false);
   render();
-  document.querySelector('.tabbar button[data-tab="invoice"]').click();
+  goTab('invoice');
 }
 
 /* ================= sales ================= */
@@ -1087,22 +1147,20 @@ async function refreshSales() {
   let s;
   try { s = await api('GET', '/api/sales'); } catch (e) { toast(e.message); return; }
   const host = $('salesContent');
-  if (!s.orders) { host.innerHTML = '<div class="list-empty">No sales recorded yet. Totals build up as you export or send.</div>'; return; }
+  if (!s.orders) { host.innerHTML = '<div class="card"><div class="list-empty">No sales recorded yet. Totals build up as you export or send.</div></div>'; return; }
   const maxRev = s.items.length ? s.items[0].revenue : 1;
   host.innerHTML = `
     <div class="stat-grid">
       <div class="stat"><div class="v">${fmt(s.totalSales)}</div><div class="l">Total sales</div></div>
       <div class="stat"><div class="v">${s.orders}</div><div class="l">Orders</div></div>
       <div class="stat"><div class="v">${s.unitsSold}</div><div class="l">Items sold</div></div>
+      <div class="stat"><div class="v">${fmt(s.avgOrder)}</div><div class="l">Average order</div></div>
     </div>
-    <div class="stat-grid" style="grid-template-columns:1fr">
-      <div class="stat"><div class="v">${fmt(s.avgOrder)}</div><div class="l">Average order value</div></div>
-    </div>
-    <div class="subhead">Items by revenue</div>` +
+    <div class="card"><div class="subhead" style="margin-top:0">Items by revenue</div>` +
     s.items.map((i, ix) => `<div class="rankrow"><span class="rank">${ix + 1}</span>
       <span class="nm">${esc(i.name)}<span class="bar"><i style="width:${Math.max(4, Math.round(i.revenue / maxRev * 100))}%"></i></span></span>
       <span class="q">×${i.qty}</span>
-      <span class="rev">${fmt(i.revenue)}</span></div>`).join('');
+      <span class="rev">${fmt(i.revenue)}</span></div>`).join('') + '</div>';
 }
 
 /* ================= customers & measurements ================= */
@@ -1114,7 +1172,7 @@ async function refreshCustomers() {
   if (!state.customers.length) { host.innerHTML = '<div class="list-empty">No customers yet. They are added automatically when you invoice them.</div>'; return; }
   host.innerHTML = state.customers.map(c => `
     <div class="list-item" data-id="${c.id}">
-      <div class="mark" style="width:34px;height:34px;font-size:12.5px;border-radius:8px;background:var(--accent-tint);color:var(--accent-ink)">${esc(initials(c.name))}</div>
+      <div class="cust-badge">${esc(initials(c.name))}</div>
       <div class="info">
         <div class="t1">${esc(c.name)}</div>
         <div class="t2">${esc(c.phone || 'No phone')}${c.records ? ' · ' + c.records + ' record(s)' : ''}${c.invoices ? ' · ' + c.invoices + ' invoice(s)' : ''}</div>
@@ -1151,7 +1209,7 @@ async function openCustomer(id) {
   $('custSheetBody').innerHTML = `
     <div class="muted" style="margin-bottom:12px">${esc(c.phone || 'No phone')}${c.address ? ' · ' + esc(c.address) : ''}</div>
     <button class="btn btn-primary" id="cInvoice" style="margin-bottom:8px">New ${esc(state.business.docNoun.toLowerCase())} for ${esc(c.name)}</button>
-    <button class="btn btn-add" id="cMeasure" style="margin-bottom:16px;min-height:44px">Take measurements</button>
+    <button class="btn btn-add" id="cMeasure" style="margin-bottom:14px">Take measurements</button>
     <div class="subhead" style="margin-top:0">Measurement records</div>
     <div id="cRecords">${records.length ? '' : '<div class="list-empty">No records yet.</div>'}</div>`;
   const recHost = $('cRecords');
@@ -1164,7 +1222,7 @@ async function openCustomer(id) {
         <div class="t1">${esc(r.templateName)}</div>
         <div class="t2">${new Date(r.ts).toLocaleDateString('en-GB')} · ${pairs.length} field(s)${r.note ? ' · ' + esc(r.note) : ''}</div>
       </div>
-      <button class="btn btn-ghost" style="min-height:34px;padding:4px 12px;font-size:12.5px">Share</button>
+      <button class="btn btn-ghost" style="min-height:32px;padding:4px 12px;font-size:12px">Share</button>
       <button class="del">✕</button>`;
     el.querySelector('.info').addEventListener('click', () => openRecordEntry(c, r));
     el.querySelector('.btn-ghost').addEventListener('click', () => shareRecordCard(c, r));
@@ -1180,7 +1238,7 @@ async function openCustomer(id) {
     clearEditor();
     $('custName').value = c.name; $('custPhone').value = c.phone || ''; $('custAddr').value = c.address || '';
     render();
-    document.querySelector('.tabbar button[data-tab="invoice"]').click();
+    goTab('invoice');
   });
   $('cMeasure').addEventListener('click', () => openRecordEntry(c, null, records[0]));
   openSheet('cust');
@@ -1210,7 +1268,7 @@ function openRecordEntry(cust, record, latest) {
     host.innerHTML = '';
     (tpl ? tpl.fields : []).forEach(f => {
       const row = document.createElement('div');
-      row.className = 'catrow'; row.style.gridTemplateColumns = '1fr 108px';
+      row.className = 'catrow'; row.style.gridTemplateColumns = '1fr 104px';
       row.innerHTML = `<label style="align-self:center;margin:0">${esc(f.label)}</label>
         <input type="text" inputmode="decimal" data-k="${esc(f.label)}" value="${esc(source[f.label] || '')}" placeholder="—">`;
       host.appendChild(row);
@@ -1249,7 +1307,7 @@ async function shareRecordCard(cust, r) {
   await shareOrDownload(new File([blob], `Measurements-${cust.name.replace(/\W+/g, '')}.png`, { type: 'image/png' }));
 }
 
-/* sheets plumbing */
+/* dialogs plumbing */
 function openSheet(which) { $(which + 'Overlay').classList.add('open'); $(which + 'Sheet').classList.add('open'); }
 function closeSheet(which) { $(which + 'Overlay').classList.remove('open'); $(which + 'Sheet').classList.remove('open'); }
 ['cust','rec'].forEach(w => {
