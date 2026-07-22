@@ -160,7 +160,21 @@ const PRESETS = [
     }
   },
   {
-    slug: 'food', name: 'Food vendor / Caterer', sort: 4,
+    slug: 'cakes', name: 'Cakes & Baking', sort: 4,
+    preset: {
+      docNoun: 'Invoice', labels: true, measurements: true,
+      catalogue: [
+        { name: 'Cake — 8 inch', price: 0, unit: 'pcs' }, { name: 'Cake — 10 inch', price: 0, unit: 'pcs' },
+        { name: 'Cupcakes', price: 0, unit: 'dozen' }, { name: 'Small chops', price: 0, unit: 'pack' },
+        { name: 'Banana bread', price: 0, unit: 'loaf' }
+      ],
+      templates: [
+        { name: 'Cake spec', fields: ['Occasion', 'Size (inches)', 'Tiers', 'Flavour', 'Icing type', 'Colour theme', 'Topper / Inscription', 'Delivery date'] }
+      ]
+    }
+  },
+  {
+    slug: 'food', name: 'Food vendor / Caterer', sort: 5,
     preset: {
       docNoun: 'Order', labels: true, measurements: false,
       catalogue: [
@@ -171,7 +185,20 @@ const PRESETS = [
     }
   },
   {
-    slug: 'services', name: 'Services (hair, makeup, lessons…)', sort: 5,
+    slug: 'electronics', name: 'Electronics & Gadgets', sort: 6,
+    preset: {
+      docNoun: 'Invoice', labels: true, measurements: false,
+      footerNote: '7-day return policy · Warranty as stated per item',
+      catalogue: [
+        { name: 'Phone', price: 0, unit: 'pcs' }, { name: 'Laptop', price: 0, unit: 'pcs' },
+        { name: 'Charger', price: 0, unit: 'pcs' }, { name: 'Earbuds', price: 0, unit: 'pcs' },
+        { name: 'Phone case', price: 0, unit: 'pcs' }, { name: 'Screen guard', price: 0, unit: 'pcs' }
+      ],
+      templates: []
+    }
+  },
+  {
+    slug: 'services', name: 'Services (hair, makeup, lessons…)', sort: 7,
     preset: {
       docNoun: 'Receipt', labels: false, measurements: false,
       catalogue: [{ name: 'Home service', price: 0 }],
@@ -179,7 +206,7 @@ const PRESETS = [
     }
   },
   {
-    slug: 'other', name: 'Other / General', sort: 6,
+    slug: 'other', name: 'Other / General', sort: 8,
     preset: { docNoun: 'Invoice', labels: true, measurements: false, catalogue: [], templates: [] }
   }
 ];

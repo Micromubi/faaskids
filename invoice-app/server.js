@@ -87,7 +87,7 @@ app.post('/api/onboard', requireAuth, wrap(async (req, res) => {
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
       .run(req.user.id, name, str(b.slogan, 80), cat.slug, str(b.theme, 20) || 'rose',
         str(b.contactPhone, 30), str(b.socialHandle, 40), prefix,
-        JSON.stringify(payments), str(b.footerNote, 200), preset.docNoun || 'Invoice', Date.now());
+        JSON.stringify(payments), str(b.footerNote, 200) || str(preset.footerNote || '', 200), preset.docNoun || 'Invoice', Date.now());
     const bizId = r.lastInsertRowid;
     const insItem = db.prepare('INSERT INTO catalogue_items (business_id, name, default_price, unit, sort) VALUES (?, ?, ?, ?, ?)');
     (Array.isArray(b.catalogue) && b.catalogue.length ? b.catalogue : preset.catalogue)
@@ -177,7 +177,7 @@ app.get('/api/invoices', requireAuth, requireBusiness, (req, res) => {
 app.post('/api/invoices', requireAuth, requireBusiness, (req, res) => {
   const b = req.body || {};
   const items = (Array.isArray(b.items) ? b.items : []).slice(0, 100).map(i => ({
-    name: str(i.name, 80) || 'Item', unit: str(i.unit, 10),
+    name: str(i.name, 80) || 'Item', unit: str(i.unit, 10), detail: str(i.detail, 120),
     qty: Math.max(0.01, Math.round((num(i.qty) || 1) * 100) / 100), price: num(i.price)
   })).map(i => ({ ...i, amount: Math.round(i.qty * i.price * 100) / 100 }));
   if (!items.length) throw httpErr(400, 'Add at least one item');
