@@ -3,337 +3,365 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<meta name="theme-color" content="#fdf6ef">
+<meta name="theme-color" content="#101216">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="format-detection" content="telephone=no,date=no,address=no,email=no">
 <title>Invoice App</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🧾</text></svg>">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='22' fill='%23444ce7'/><path d='M30 28h40v8H30zm0 18h40v8H30zm0 18h26v8H30z' fill='white'/></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js" defer></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
 <style>
   :root {
-    --p: #e0447c; --p-dark: #c73368; --p-soft: #fce7f0;
-    --a: #2ab7a9; --a-soft: #e0f5f3;
-    --w: #f5a623; --w-soft: #fdf0d9; --w-ink: #b47410;
-    --bg: #fdf6ef; --card: #fff; --ink: #43384a; --ink-soft: #8a7f91; --line: #f0e4da;
-    --radius: 18px;
+    --accent: #444ce7; --accent-strong: #3538cd; --accent-tint: #eef0fd; --accent-ink: #2d31a6;
+    --bg: #f6f7f9; --surface: #ffffff; --ink: #16181d; --ink-2: #5c616b; --ink-3: #9aa0aa;
+    --border: #e4e6ea; --border-strong: #d4d7dd;
+    --ok: #0f8a5f; --ok-tint: #e6f5ef; --warn-ink: #92400e; --warn-tint: #fdf3e2;
+    --danger: #c2314c; --danger-tint: #fbebee;
+    --r: 10px; --r-lg: 14px;
+    --shadow: 0 1px 2px rgba(16,24,40,.05);
+    --shadow-lift: 0 8px 28px rgba(16,24,40,.12);
   }
-  body[data-theme="ocean"]  { --p:#2f6fed; --p-dark:#1f55c4; --p-soft:#e3ecfd; --a:#12a5b8; --a-soft:#def4f7; --w:#f08c2e; --w-soft:#fdeeda; --w-ink:#a85f13; --bg:#f2f6fd; --line:#e2e9f5; --ink:#2b3550; --ink-soft:#7c86a3; }
-  body[data-theme="forest"] { --p:#2e8b57; --p-dark:#226b42; --p-soft:#e2f3e9; --a:#7a9e2e; --a-soft:#eef4dc; --w:#d9a220; --w-soft:#faf0d4; --w-ink:#946c0d; --bg:#f3f8f2; --line:#e2ecdf; --ink:#2f4032; --ink-soft:#7d917f; }
-  body[data-theme="royal"]  { --p:#7b4dcf; --p-dark:#5f37a8; --p-soft:#efe7fb; --a:#d9538f; --a-soft:#fbe4ef; --w:#f5a623; --w-soft:#fdf0d9; --w-ink:#b47410; --bg:#f7f4fc; --line:#e9e2f5; --ink:#3b3050; --ink-soft:#8b80a3; }
-  body[data-theme="sunset"] { --p:#e8590c; --p-dark:#c2410b; --p-soft:#fdeadd; --a:#c92a5b; --a-soft:#fbe2ea; --w:#e3a008; --w-soft:#fbf0d3; --w-ink:#986c05; --bg:#fdf6f0; --line:#f3e4d8; --ink:#4a3527; --ink-soft:#9a8574; }
+  body[data-theme="teal"]    { --accent:#0d8a8a; --accent-strong:#0a6e6e; --accent-tint:#e4f4f4; --accent-ink:#0a5c5c; }
+  body[data-theme="emerald"] { --accent:#12855c; --accent-strong:#0e6a49; --accent-tint:#e5f4ee; --accent-ink:#0b5a3e; }
+  body[data-theme="amber"]   { --accent:#b45309; --accent-strong:#92400e; --accent-tint:#faf0e4; --accent-ink:#7c3a08; }
+  body[data-theme="crimson"] { --accent:#b42145; --accent-strong:#951b39; --accent-tint:#f9e8ed; --accent-ink:#7d1730; }
+  body[data-theme="slate"]   { --accent:#3d4654; --accent-strong:#2b323d; --accent-tint:#eceef1; --accent-ink:#242a33; }
 
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   html { -webkit-text-size-adjust: 100%; }
-  body { font-family: 'Nunito', sans-serif; background: var(--bg); color: var(--ink); min-height: 100vh; }
-  h1, h2, h3, .brand { font-family: 'Baloo 2', cursive; }
+  body { font-family: 'Inter', -apple-system, sans-serif; background: var(--bg); color: var(--ink);
+    min-height: 100vh; font-size: 15px; letter-spacing: -0.01em; }
   .hidden { display: none !important; }
 
-  .topbar { background: var(--card); border-bottom: 3px solid var(--p-soft); padding: 10px 16px;
-    padding-top: calc(10px + env(safe-area-inset-top)); display: flex; align-items: center; gap: 12px;
+  /* ===== app bar ===== */
+  .appbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 12px 18px;
+    padding-top: calc(12px + env(safe-area-inset-top)); display: flex; align-items: center; gap: 12px;
     position: sticky; top: 0; z-index: 10; }
-  .avatar { width: 44px; height: 44px; border-radius: 50%; background: var(--p); color: #fff;
-    display: flex; align-items: center; justify-content: center; font-family: 'Baloo 2', cursive;
-    font-weight: 800; font-size: 18px; flex: 0 0 auto; }
-  .topbar .brand { font-size: 21px; font-weight: 800; color: var(--p); line-height: 1.05; }
-  .topbar .tag { font-size: 12px; color: var(--a); font-weight: 700; }
+  .mark { width: 38px; height: 38px; border-radius: 9px; background: var(--accent); color: #fff;
+    display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 15px;
+    letter-spacing: 0; flex: 0 0 auto; }
+  .appbar .biz { min-width: 0; }
+  .appbar .biz .n { font-weight: 700; font-size: 15.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .appbar .biz .s { font-size: 12px; color: var(--ink-3); font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
-  .wrap { max-width: 560px; margin: 0 auto; padding: 16px; display: flex; flex-direction: column; gap: 16px;
+  .wrap { max-width: 640px; margin: 0 auto; padding: 18px 16px; display: flex; flex-direction: column; gap: 14px;
     padding-bottom: calc(150px + env(safe-area-inset-bottom)); }
-  .panel { background: var(--card); border-radius: var(--radius); padding: 18px; box-shadow: 0 4px 20px rgba(0,0,0,.06); }
-  .panel h2 { font-size: 19px; color: var(--p); margin-bottom: 12px; display: flex; align-items: center; gap: 8px; }
-  .section { margin-bottom: 20px; }
+  .card { background: var(--surface); border: 1px solid var(--border); border-radius: var(--r-lg);
+    padding: 20px; box-shadow: var(--shadow); }
+  .card h2 { font-size: 13px; font-weight: 700; text-transform: uppercase; letter-spacing: .07em;
+    color: var(--ink-2); margin-bottom: 14px; }
+  .section { margin-bottom: 24px; }
   .section:last-child { margin-bottom: 0; }
-  .muted { color: var(--ink-soft); font-size: 13px; font-weight: 700; }
+  .muted { color: var(--ink-3); font-size: 13px; font-weight: 500; }
 
-  label { font-size: 13px; font-weight: 800; color: var(--ink-soft); display: block; margin-bottom: 5px; }
+  label { font-size: 13px; font-weight: 600; color: var(--ink-2); display: block; margin-bottom: 6px; }
   input[type=text], input[type=tel], input[type=number], input[type=email], select, textarea {
-    width: 100%; min-height: 50px; padding: 12px 14px; border: 2px solid var(--line); border-radius: 13px;
-    font-family: 'Nunito', sans-serif; font-size: 16px; font-weight: 700; color: var(--ink); background: #fff;
-    outline: none; transition: border-color .15s; appearance: none; -webkit-appearance: none; }
-  select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9'%3E%3Cpath d='M1 1l6 6 6-6' stroke='%238a7f91' stroke-width='2.4' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
-    background-repeat: no-repeat; background-position: right 14px center; padding-right: 38px; }
-  input:focus, select:focus, textarea:focus { border-color: var(--a); }
+    width: 100%; min-height: 46px; padding: 11px 13px; border: 1px solid var(--border-strong);
+    border-radius: var(--r); font-family: inherit; font-size: 15px; font-weight: 500; color: var(--ink);
+    background: var(--surface); outline: none; transition: border-color .15s, box-shadow .15s;
+    appearance: none; -webkit-appearance: none; }
+  select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%239aa0aa' stroke-width='1.8' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat: no-repeat; background-position: right 13px center; padding-right: 36px; }
+  input:focus, select:focus, textarea:focus { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-tint); }
   .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .field { margin-bottom: 12px; }
+  .field { margin-bottom: 14px; }
 
-  .btn { font-family: 'Baloo 2', cursive; font-weight: 700; font-size: 16px; border: none; border-radius: 14px;
-    padding: 14px 18px; min-height: 52px; cursor: pointer; transition: transform .1s; }
-  .btn:active { transform: scale(.97); }
-  .btn:disabled { opacity: .55; }
-  .btn-primary { background: var(--p); color: #fff; box-shadow: 0 4px 14px color-mix(in srgb, var(--p) 35%, transparent); width: 100%; }
-  .btn-quiet { background: #fff; color: var(--ink-soft); border: 2px solid var(--line); min-height: 44px; padding: 8px 14px; font-size: 14px; }
-  .btn-add { width: 100%; background: var(--a-soft); color: var(--a); border: 2px dashed var(--a); }
-  .btn-add:active { background: var(--a); color: #fff; }
-  .btn-danger { background: var(--p-soft); color: var(--p-dark); }
+  .btn { font-family: inherit; font-weight: 600; font-size: 14.5px; border: none; border-radius: var(--r);
+    padding: 12px 18px; min-height: 46px; cursor: pointer; transition: filter .12s, transform .06s; }
+  .btn:active { transform: translateY(1px); }
+  .btn:disabled { opacity: .5; }
+  .btn-primary { background: var(--accent); color: #fff; width: 100%; }
+  .btn-primary:hover { filter: brightness(1.06); }
+  .btn-ghost { background: var(--surface); color: var(--ink-2); border: 1px solid var(--border-strong); min-height: 42px; padding: 9px 14px; font-size: 13.5px; }
+  .btn-add { width: 100%; background: none; color: var(--accent); border: 1px dashed var(--border-strong); font-weight: 600; }
+  .btn-add:hover { border-color: var(--accent); background: var(--accent-tint); }
 
-  .chips { display: flex; gap: 10px; margin-top: 10px; flex-wrap: wrap; }
-  .chip { border: 2px solid var(--w); background: var(--w-soft); color: var(--w-ink); font-family: 'Nunito', sans-serif;
-    font-weight: 800; font-size: 15px; padding: 10px 16px; border-radius: 999px; cursor: pointer; }
-  .chip:active, .chip.active { background: var(--w); color: #fff; }
+  .chips { display: flex; gap: 8px; margin-top: 10px; flex-wrap: wrap; }
+  .chip { border: 1px solid var(--border-strong); background: var(--surface); color: var(--ink-2);
+    font-family: inherit; font-weight: 600; font-size: 13px; padding: 7px 13px; border-radius: 999px; cursor: pointer; }
+  .chip.active, .chip:active { background: var(--accent); border-color: var(--accent); color: #fff; }
 
   /* line items */
-  .item-card { border: 2px solid var(--line); border-radius: 16px; padding: 14px; margin-bottom: 14px; background: #fffdfb; position: relative; }
-  .item-card .remove { position: absolute; top: 10px; right: 10px; border: none; background: var(--p-soft); color: var(--p);
-    width: 34px; height: 34px; border-radius: 50%; font-weight: 800; cursor: pointer; font-size: 15px; line-height: 1; }
-  .item-card > label:first-of-type { padding-right: 40px; }
-  .qty-price { display: grid; grid-template-columns: 132px 1fr; gap: 10px; margin-top: 10px; }
-  .qty { display: flex; align-items: stretch; border: 2px solid var(--line); border-radius: 13px; overflow: hidden; background: #fff; min-height: 50px; }
-  .qty button { width: 42px; border: none; background: var(--a-soft); color: var(--a); font-size: 22px; font-weight: 800; cursor: pointer; }
-  .qty button:active { background: var(--a); color: #fff; }
-  .qty input { width: 100%; min-height: 0; border: none; border-radius: 0; text-align: center; font-size: 17px; font-weight: 800; padding: 0; }
+  .item-card { border: 1px solid var(--border); border-radius: var(--r); padding: 14px; margin-bottom: 12px;
+    background: var(--bg); position: relative; }
+  .item-card .remove { position: absolute; top: 10px; right: 10px; border: none; background: none;
+    color: var(--ink-3); width: 30px; height: 30px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 15px; }
+  .item-card .remove:hover { background: var(--danger-tint); color: var(--danger); }
+  .item-card > label:first-of-type { padding-right: 36px; }
+  .qty-price { display: grid; grid-template-columns: 124px 1fr; gap: 10px; margin-top: 10px; }
+  .qty { display: flex; align-items: stretch; border: 1px solid var(--border-strong); border-radius: var(--r);
+    overflow: hidden; background: var(--surface); min-height: 46px; }
+  .qty button { width: 40px; border: none; background: none; color: var(--ink-2); font-size: 19px; font-weight: 600; cursor: pointer; }
+  .qty button:active { background: var(--accent); color: #fff; }
+  .qty input { width: 100%; min-height: 0; border: none; border-radius: 0; text-align: center; font-size: 15.5px;
+    font-weight: 700; padding: 0; background: none; }
   .qty input::-webkit-outer-spin-button, .qty input::-webkit-inner-spin-button { -webkit-appearance: none; }
   .naira-input { position: relative; }
-  .naira-input span { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); font-weight: 800; color: var(--ink-soft); font-size: 16px; }
-  .naira-input input { padding-left: 32px; }
+  .naira-input span { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); font-weight: 600; color: var(--ink-3); font-size: 14px; }
+  .naira-input input { padding-left: 34px; }
   .custom-name { margin-top: 10px; display: none; }
   .custom-name.show { display: block; }
 
-  /* dock + tabbar */
-  .dock { position: fixed; left: 0; right: 0; bottom: calc(58px + env(safe-area-inset-bottom)); background: var(--card);
-    border-top: 3px solid var(--p-soft); padding: 8px 16px; z-index: 20; max-width: 560px; margin: 0 auto;
-    border-radius: 20px 20px 0 0; box-shadow: 0 -6px 24px rgba(0,0,0,.10); }
-  .dock .total-line { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 6px; }
-  .dock .lbl { font-size: 12px; font-weight: 800; color: var(--ink-soft); letter-spacing: 1px; }
-  .dock .val { font-family: 'Baloo 2', cursive; font-size: 24px; font-weight: 800; color: var(--a); }
-  .dock .btns { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-  .dock .btn { padding: 11px 2px; font-size: 13px; white-space: nowrap; min-height: 44px; }
-  .b-pdf { background: var(--p); color: #fff; } .b-img { background: var(--w); color: #fff; }
-  .b-lbl { background: var(--a); color: #fff; } .b-wa { background: #25d366; color: #fff; }
+  /* ===== action dock + tab nav ===== */
+  .dock { position: fixed; left: 0; right: 0; bottom: calc(56px + env(safe-area-inset-bottom));
+    background: var(--surface); border-top: 1px solid var(--border); padding: 10px 16px; z-index: 20;
+    max-width: 640px; margin: 0 auto; box-shadow: 0 -4px 20px rgba(16,24,40,.06); }
+  .dock .inner { display: flex; align-items: center; gap: 10px; }
+  .dock .total { flex: 0 0 auto; }
+  .dock .total .l { font-size: 10.5px; font-weight: 700; color: var(--ink-3); text-transform: uppercase; letter-spacing: .08em; }
+  .dock .total .v { font-size: 19px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+  .dock .btns { flex: 1; display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+  .dock .btn { padding: 10px 2px; font-size: 12.5px; min-height: 40px; white-space: nowrap; font-weight: 600; }
+  .b-pdf { background: var(--ink); color: #fff; }
+  .b-img, .b-lbl { background: var(--surface); color: var(--ink); border: 1px solid var(--border-strong); }
+  .b-wa { background: var(--ok); color: #fff; }
 
-  .tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 21; background: var(--card);
-    border-top: 2px solid var(--line); max-width: 560px; margin: 0 auto; display: grid; grid-template-columns: repeat(5, 1fr);
-    padding-bottom: env(safe-area-inset-bottom); }
-  .tabbar button { border: none; background: none; padding: 8px 0 9px; font-family: 'Nunito', sans-serif;
-    font-weight: 800; font-size: 10.5px; color: var(--ink-soft); cursor: pointer; }
-  .tabbar button .ico { display: block; font-size: 19px; margin-bottom: 1px; }
-  .tabbar button.active { color: var(--p); }
+  .tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 21; background: var(--surface);
+    border-top: 1px solid var(--border); max-width: 640px; margin: 0 auto; display: grid;
+    grid-template-columns: repeat(5, 1fr); padding-bottom: env(safe-area-inset-bottom); }
+  .tabbar button { border: none; background: none; padding: 7px 0 8px; font-family: inherit;
+    font-weight: 600; font-size: 10px; color: var(--ink-3); cursor: pointer; letter-spacing: .02em; }
+  .tabbar button svg { display: block; margin: 0 auto 2px; width: 20px; height: 20px; stroke: currentColor; }
+  .tabbar button.active { color: var(--accent); }
 
-  /* invoice preview */
-  .invoice { background: #fff; border-radius: var(--radius); box-shadow: 0 4px 20px rgba(0,0,0,.06); overflow: hidden; }
-  .inv-head { background: linear-gradient(135deg, var(--p-soft) 0%, var(--w-soft) 60%, var(--a-soft) 100%);
-    padding: 20px; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
-  .inv-brand { display: flex; align-items: center; gap: 12px; }
-  .inv-brand .avatar { width: 56px; height: 56px; font-size: 22px; box-shadow: 0 3px 10px rgba(0,0,0,.12); }
-  .inv-brand .name { font-family: 'Baloo 2', cursive; font-size: 25px; font-weight: 800; line-height: 1; color: var(--p); }
-  .inv-brand .slogan { color: var(--a); font-weight: 800; font-size: 12px; letter-spacing: 1px; text-transform: uppercase; }
-  .inv-brand .contact { color: var(--ink-soft); font-weight: 700; font-size: 12px; margin-top: 3px; }
-  .inv-meta { text-align: right; }
-  .inv-meta .title { font-family: 'Baloo 2', cursive; font-size: 21px; font-weight: 800; color: var(--p); letter-spacing: 2px; text-transform: uppercase; }
-  .inv-meta div { font-size: 13px; font-weight: 700; }
-  .inv-body { padding: 18px 16px 22px; }
-  .inv-to { margin-bottom: 16px; }
-  .inv-to .lbl { font-size: 11px; font-weight: 800; letter-spacing: 1.5px; color: var(--a); text-transform: uppercase; }
-  .inv-to .who { font-size: 18px; font-weight: 800; font-family: 'Baloo 2', cursive; }
-  .inv-to .phone { font-size: 13px; color: var(--ink-soft); font-weight: 700; }
-  table.inv-table { width: 100%; border-collapse: collapse; }
-  .inv-table th { text-align: left; font-size: 10.5px; letter-spacing: 1px; text-transform: uppercase; color: #fff;
-    background: var(--p); padding: 10px; }
-  .inv-table th:first-child { border-radius: 10px 0 0 10px; }
-  .inv-table th:last-child { border-radius: 0 10px 10px 0; }
-  .inv-table th.num, .inv-table td.num { text-align: right; }
-  .inv-table th.ctr, .inv-table td.ctr { text-align: center; }
-  .inv-table td { padding: 11px 10px; font-size: 14px; font-weight: 700; border-bottom: 2px solid var(--line); }
-  .inv-table tr:last-child td { border-bottom: none; }
-  .empty-hint { text-align: center; color: var(--ink-soft); font-weight: 700; padding: 26px 10px; font-size: 14px; }
-  .inv-totals { margin-top: 12px; display: flex; justify-content: flex-end; }
-  .inv-totals table { min-width: 230px; }
-  .inv-totals td { padding: 6px 10px; font-size: 14px; font-weight: 700; }
-  .inv-totals td.num { text-align: right; }
-  .inv-totals .grand td { font-family: 'Baloo 2', cursive; font-size: 19px; font-weight: 800; color: #fff; background: var(--a); padding: 10px 12px; }
-  .inv-totals .grand td:first-child { border-radius: 10px 0 0 10px; }
-  .inv-totals .grand td:last-child { border-radius: 0 10px 10px 0; }
-  .inv-pay { margin-top: 18px; padding: 14px 16px; background: var(--a-soft); border-radius: 14px; }
-  .inv-pay .lbl { font-size: 11px; font-weight: 800; letter-spacing: 1.5px; color: var(--a); text-transform: uppercase; margin-bottom: 6px; }
-  .inv-pay .row { font-size: 14px; font-weight: 700; display: flex; justify-content: space-between; gap: 10px; padding: 2px 0; }
-  .inv-pay .row b { font-weight: 800; text-align: right; }
-  .inv-pay .acct { font-family: 'Baloo 2', cursive; font-size: 18px; letter-spacing: 1px; color: var(--p-dark); }
-  .inv-notes { margin-top: 12px; padding: 12px 16px; background: var(--w-soft); border-radius: 14px; }
-  .inv-notes .lbl { font-size: 11px; font-weight: 800; letter-spacing: 1.5px; color: var(--w-ink); text-transform: uppercase; margin-bottom: 4px; }
-  .inv-notes div { font-size: 13px; font-weight: 700; white-space: pre-line; }
-  .inv-foot { margin-top: 22px; text-align: center; font-family: 'Baloo 2', cursive; font-weight: 700; color: var(--p); font-size: 15px; }
-  .inv-foot .sub { font-family: 'Nunito', sans-serif; font-size: 11.5px; color: var(--ink-soft); font-weight: 700; }
+  /* ===== invoice document ===== */
+  .doc { background: #fff; border: 1px solid var(--border); border-radius: var(--r-lg); box-shadow: var(--shadow); overflow: hidden; }
+  .doc-inner { padding: 28px 26px; }
+  .doc-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+  .doc-brand { display: flex; align-items: center; gap: 11px; min-width: 0; }
+  .doc-brand .mark { width: 42px; height: 42px; border-radius: 9px; font-size: 16px; }
+  .doc-brand .n { font-weight: 800; font-size: 18px; letter-spacing: -.02em; }
+  .doc-brand .s { font-size: 11.5px; color: var(--ink-2); font-weight: 500; }
+  .doc-brand .c { font-size: 11.5px; color: var(--ink-3); font-weight: 500; margin-top: 1px; }
+  .doc-meta { text-align: right; flex: 0 0 auto; }
+  .doc-meta .t { font-size: 11px; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-3); }
+  .doc-meta .no { font-weight: 700; font-size: 14.5px; font-variant-numeric: tabular-nums; margin-top: 2px; }
+  .doc-meta .d { font-size: 12px; color: var(--ink-2); font-weight: 500; margin-top: 1px; }
+  .doc-rule { height: 3px; background: var(--accent); border-radius: 2px; margin: 18px 0; }
+  .doc-to .l { font-size: 10.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); }
+  .doc-to .who { font-size: 16px; font-weight: 700; margin-top: 2px; }
+  .doc-to .ph { font-size: 12.5px; color: var(--ink-2); font-weight: 500; }
+  table.doc-table { width: 100%; border-collapse: collapse; margin-top: 18px; }
+  .doc-table th { text-align: left; font-size: 10.5px; letter-spacing: .1em; text-transform: uppercase;
+    color: var(--ink-3); font-weight: 700; padding: 0 8px 8px; border-bottom: 2px solid var(--ink); }
+  .doc-table th.num, .doc-table td.num { text-align: right; }
+  .doc-table th.ctr, .doc-table td.ctr { text-align: center; }
+  .doc-table td { padding: 11px 8px; font-size: 13.5px; font-weight: 500; border-bottom: 1px solid var(--border);
+    font-variant-numeric: tabular-nums; }
+  .doc-table td:first-child { font-weight: 600; }
+  .empty-hint { text-align: center; color: var(--ink-3); font-weight: 500; padding: 24px 10px; font-size: 13.5px; }
+  .doc-totals { margin-top: 6px; display: flex; justify-content: flex-end; }
+  .doc-totals table { min-width: 240px; border-collapse: collapse; }
+  .doc-totals td { padding: 6px 8px; font-size: 13.5px; font-weight: 500; color: var(--ink-2); font-variant-numeric: tabular-nums; }
+  .doc-totals td.num { text-align: right; color: var(--ink); font-weight: 600; }
+  .doc-totals .grand td { border-top: 2px solid var(--ink); padding-top: 10px; font-size: 16px; font-weight: 800; color: var(--ink); }
+  .doc-totals .grand td.num { color: var(--accent-strong); }
+  .doc-pay { margin-top: 22px; border: 1px solid var(--border); border-left: 3px solid var(--accent);
+    border-radius: 8px; padding: 13px 16px; }
+  .doc-pay .l { font-size: 10.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 6px; }
+  .doc-pay .row { font-size: 13px; font-weight: 500; display: flex; justify-content: space-between; gap: 10px; padding: 2px 0; color: var(--ink-2); }
+  .doc-pay .row b { font-weight: 700; color: var(--ink); text-align: right; font-variant-numeric: tabular-nums; }
+  .doc-note { margin-top: 12px; background: var(--bg); border-radius: 8px; padding: 11px 16px; }
+  .doc-note .l { font-size: 10.5px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 3px; }
+  .doc-note div { font-size: 13px; font-weight: 500; white-space: pre-line; color: var(--ink-2); }
+  .doc-foot { margin-top: 26px; text-align: center; font-size: 12px; color: var(--ink-3); font-weight: 500; }
+  .doc-foot .main { color: var(--ink-2); font-weight: 600; font-size: 13px; }
 
-  /* 8x8cm label (offscreen, b/w) */
+  /* ===== 8x8cm package label (offscreen, b/w thermal) ===== */
   .label { position: fixed; left: -10000px; top: 0; width: 640px; height: 640px; background: #fff; color: #000;
-    font-family: 'Nunito', sans-serif; display: flex; flex-direction: column; padding: 26px 40px 24px; }
-  .label .lbl-logo { font-family: 'Baloo 2', cursive; font-size: 44px; font-weight: 800; line-height: 1.05; text-align: center; }
-  .label .lbl-slogan { font-weight: 800; font-size: 14px; letter-spacing: .3em; margin-top: 2px; text-align: center; text-transform: uppercase; }
-  .label .lbl-bar { background: #000; color: #fff; font-weight: 800; font-size: 19px; letter-spacing: .24em; text-align: center;
-    padding: 8px 0 9px; border-radius: 6px; margin: 14px 0; }
-  .label .lbl-fields { flex: 1; display: flex; flex-direction: column; min-height: 0; }
-  .label .lbl-row { display: flex; align-items: baseline; gap: 12px; margin-bottom: 14px; }
-  .label .lbl-k { font-weight: 800; font-size: 19px; flex: 0 0 auto; }
-  .label .lbl-line { flex: 1; border-bottom: 2px solid #000; min-height: 28px; font-size: 18px; font-weight: 700; line-height: 26px;
-    padding: 0 4px 3px; white-space: nowrap; overflow: hidden; }
-  .label .lbl-2 { white-space: normal; max-height: 57px; min-height: 28px; }
-  .label .lbl-cols { display: flex; gap: 28px; }
+    font-family: 'Inter', sans-serif; display: flex; flex-direction: column; padding: 22px; }
+  .label .frame { border: 3px solid #000; flex: 1; display: flex; flex-direction: column; padding: 18px 24px; min-height: 0; }
+  .label .lbl-head { display: flex; justify-content: space-between; align-items: baseline; gap: 14px;
+    border-bottom: 3px solid #000; padding-bottom: 10px; }
+  .label .lbl-biz { font-weight: 800; font-size: 30px; letter-spacing: -.01em; white-space: nowrap; overflow: hidden; }
+  .label .lbl-tag { font-weight: 700; font-size: 13px; letter-spacing: .18em; text-transform: uppercase; flex: 0 0 auto; }
+  .label .lbl-ship { font-weight: 800; font-size: 15px; letter-spacing: .22em; margin: 12px 0 8px; }
+  .label .lbl-row { display: flex; align-items: baseline; gap: 10px; margin-bottom: 11px; }
+  .label .lbl-k { font-weight: 700; font-size: 15px; width: 76px; flex: 0 0 auto; text-transform: uppercase; letter-spacing: .04em; }
+  .label .lbl-line { flex: 1; border-bottom: 1.5px solid #000; min-height: 26px; font-size: 18px; font-weight: 600;
+    line-height: 24px; padding: 0 2px 3px; white-space: nowrap; overflow: hidden; }
+  .label .lbl-2 { white-space: normal; max-height: 53px; min-height: 26px; }
+  .label .lbl-cols { display: flex; gap: 22px; }
   .label .lbl-cols .lbl-row { flex: 1; }
-  .label .lbl-items { flex: 1; min-height: 0; overflow: hidden; margin-top: 2px; }
-  .label .lbl-item { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; border-bottom: 2px solid #000;
-    padding: 3px 4px 4px; font-size: 17px; font-weight: 700; }
+  .label .lbl-items { flex: 1; min-height: 0; overflow: hidden; border-top: 2px solid #000; padding-top: 6px; }
+  .label .lbl-item { display: flex; justify-content: space-between; align-items: baseline; gap: 12px;
+    border-bottom: 1px dashed #000; padding: 4px 2px; font-size: 16px; font-weight: 600; }
   .label .lbl-item .n { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
   .label .lbl-item .q { flex: 0 0 auto; font-weight: 800; }
-  .label .lbl-items.sz-m .lbl-item { font-size: 15px; padding: 2px 4px 3px; }
-  .label .lbl-items.sz-s .lbl-item { font-size: 13px; padding: 1px 4px 2px; border-bottom-width: 1px; }
+  .label .lbl-items.sz-m .lbl-item { font-size: 14px; padding: 3px 2px; }
+  .label .lbl-items.sz-s .lbl-item { font-size: 12px; padding: 2px; }
   .label .lbl-items.cols2 { display: grid; grid-template-columns: 1fr 1fr; column-gap: 18px; align-content: start; }
   .label .lbl-item.blank { min-height: 26px; }
-  .label .lbl-care { text-align: center; font-weight: 800; font-size: 17px; letter-spacing: .3em; border: 2px solid #000;
-    border-radius: 100px; padding: 8px 0; margin: 4px 0 12px; }
-  .label .lbl-from { text-align: center; font-weight: 800; font-size: 17px; }
+  .label .lbl-foot { background: #000; color: #fff; font-weight: 700; font-size: 14px; text-align: center;
+    padding: 9px 8px; margin-top: 10px; letter-spacing: .04em; white-space: nowrap; overflow: hidden; }
 
-  /* measurement card (offscreen share image) */
+  /* ===== measurement card (offscreen share image) ===== */
   .mcard { position: fixed; left: -10000px; top: 0; width: 640px; background: #fff; color: #111;
-    font-family: 'Nunito', sans-serif; padding: 34px 44px; }
-  .mcard .h { font-family: 'Baloo 2', cursive; font-size: 34px; font-weight: 800; }
-  .mcard .s { font-weight: 800; font-size: 15px; letter-spacing: .18em; text-transform: uppercase; margin-bottom: 6px; }
-  .mcard .who { font-size: 22px; font-weight: 800; margin: 10px 0 2px; }
-  .mcard .when { font-size: 14px; font-weight: 700; color: #666; margin-bottom: 14px; }
-  .mcard .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 30px; }
-  .mcard .mrow { display: flex; justify-content: space-between; border-bottom: 2px solid #111; padding: 7px 2px; font-size: 18px; font-weight: 700; }
-  .mcard .mrow b { font-weight: 800; }
-  .mcard .note { margin-top: 14px; font-size: 15px; font-weight: 700; white-space: pre-line; }
+    font-family: 'Inter', sans-serif; padding: 34px 42px; border-top: 6px solid #111; }
+  .mcard .h { font-weight: 800; font-size: 24px; letter-spacing: -.01em; }
+  .mcard .s { font-weight: 700; font-size: 12px; letter-spacing: .16em; text-transform: uppercase; color: #666; margin-top: 2px; }
+  .mcard .who { font-size: 20px; font-weight: 700; margin: 16px 0 2px; }
+  .mcard .when { font-size: 13px; font-weight: 500; color: #666; margin-bottom: 14px; }
+  .mcard .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 0 34px; }
+  .mcard .mrow { display: flex; justify-content: space-between; border-bottom: 1px solid #ccc; padding: 8px 2px; font-size: 16px; font-weight: 500; }
+  .mcard .mrow b { font-weight: 800; font-variant-numeric: tabular-nums; }
+  .mcard .note { margin-top: 16px; font-size: 14px; font-weight: 500; color: #444; white-space: pre-line; }
 
-  /* sheets */
-  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 50; display: none; }
+  /* ===== sheets ===== */
+  .overlay { position: fixed; inset: 0; background: rgba(16,18,22,.5); z-index: 50; display: none; }
   .overlay.open { display: block; }
-  .sheet { position: fixed; left: 0; right: 0; bottom: 0; max-width: 560px; margin: 0 auto; max-height: 85vh;
-    background: var(--card); border-radius: 22px 22px 0 0; z-index: 51; display: none; flex-direction: column;
-    padding: 16px 16px calc(16px + env(safe-area-inset-bottom)); box-shadow: 0 -8px 30px rgba(0,0,0,.25); }
+  .sheet { position: fixed; left: 0; right: 0; bottom: 0; max-width: 640px; margin: 0 auto; max-height: 85vh;
+    background: var(--surface); border-radius: 16px 16px 0 0; z-index: 51; display: none; flex-direction: column;
+    padding: 18px 18px calc(18px + env(safe-area-inset-bottom)); box-shadow: var(--shadow-lift); }
   .sheet.open { display: flex; }
-  .sheet-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
-  .sheet-head h2 { font-size: 19px; color: var(--p); }
-  .closer { border: none; background: var(--p-soft); color: var(--p); width: 34px; height: 34px; border-radius: 50%;
-    font-weight: 800; font-size: 15px; cursor: pointer; }
+  .sheet-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .sheet-head h2 { font-size: 16px; font-weight: 700; }
+  .closer { border: none; background: var(--bg); color: var(--ink-2); width: 32px; height: 32px; border-radius: 8px;
+    font-weight: 600; font-size: 14px; cursor: pointer; }
   .sheet-body { overflow-y: auto; -webkit-overflow-scrolling: touch; }
 
-  /* lists */
-  .list-item { display: flex; align-items: center; gap: 10px; border: 2px solid var(--line); border-radius: 14px;
-    padding: 10px 12px; margin-bottom: 10px; }
+  /* ===== lists ===== */
+  .list-item { display: flex; align-items: center; gap: 12px; border: 1px solid var(--border); border-radius: var(--r);
+    padding: 12px 14px; margin-bottom: 8px; background: var(--surface); }
   .list-item .info { flex: 1; min-width: 0; cursor: pointer; }
-  .list-item .t1 { font-weight: 800; font-size: 15px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
-  .list-item .t2 { font-size: 12.5px; color: var(--ink-soft); font-weight: 700; }
-  .list-item .amt { font-family: 'Baloo 2', cursive; font-weight: 800; font-size: 16px; color: var(--p); flex: 0 0 auto; }
-  .list-item .del { border: none; background: var(--p-soft); color: var(--p); width: 32px; height: 32px; border-radius: 50%;
-    cursor: pointer; font-size: 14px; flex: 0 0 auto; }
-  .list-empty { text-align: center; color: var(--ink-soft); font-weight: 700; padding: 30px 10px; }
+  .list-item .t1 { font-weight: 600; font-size: 14.5px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .list-item .t2 { font-size: 12.5px; color: var(--ink-3); font-weight: 500; margin-top: 1px; }
+  .list-item .amt { font-weight: 700; font-size: 14.5px; flex: 0 0 auto; font-variant-numeric: tabular-nums; }
+  .list-item .del { border: none; background: none; color: var(--ink-3); width: 30px; height: 30px; border-radius: 8px;
+    cursor: pointer; font-size: 13px; flex: 0 0 auto; }
+  .list-item .del:hover { background: var(--danger-tint); color: var(--danger); }
+  .list-empty { text-align: center; color: var(--ink-3); font-weight: 500; padding: 32px 10px; font-size: 13.5px; }
+  .tag-no { display: inline-block; font-size: 11px; font-weight: 700; color: var(--accent-ink); background: var(--accent-tint);
+    border-radius: 5px; padding: 2px 7px; font-variant-numeric: tabular-nums; }
 
-  /* stats */
-  .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-bottom: 14px; }
-  .stat-tile { background: var(--a-soft); border-radius: 14px; padding: 12px 8px; text-align: center; }
-  .stat-tile.pink { background: var(--p-soft); }
-  .stat-tile.yellow { background: var(--w-soft); }
-  .stat-tile .val { font-family: 'Baloo 2', cursive; font-size: 18px; font-weight: 800; color: var(--a); line-height: 1.1; }
-  .stat-tile.pink .val { color: var(--p); }
-  .stat-tile.yellow .val { color: var(--w-ink); }
-  .stat-tile .lbl { font-size: 10.5px; font-weight: 800; color: var(--ink-soft); text-transform: uppercase; margin-top: 3px; }
-  .subhead { font-size: 13px; font-weight: 800; color: var(--p); margin: 4px 0 8px; }
-  .rankrow { display: flex; align-items: center; gap: 10px; border: 2px solid var(--line); border-radius: 12px; padding: 9px 12px; margin-bottom: 8px; }
-  .rankrow .rank { font-family: 'Baloo 2', cursive; font-weight: 800; color: var(--ink-soft); font-size: 14px; width: 20px; }
-  .rankrow .nm { flex: 1; min-width: 0; font-weight: 800; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .rankrow .q { font-size: 12px; color: var(--ink-soft); font-weight: 700; }
-  .rankrow .rev { font-family: 'Baloo 2', cursive; font-weight: 800; color: var(--a); font-size: 14.5px; }
+  /* ===== stats ===== */
+  .stat-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-bottom: 14px; }
+  .stat { border: 1px solid var(--border); border-radius: var(--r); padding: 13px 12px; background: var(--surface); }
+  .stat .v { font-size: 17px; font-weight: 800; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+  .stat .l { font-size: 10.5px; font-weight: 600; color: var(--ink-3); text-transform: uppercase; letter-spacing: .06em; margin-top: 3px; }
+  .subhead { font-size: 12px; font-weight: 700; color: var(--ink-2); text-transform: uppercase; letter-spacing: .07em; margin: 16px 0 8px; }
+  .rankrow { display: flex; align-items: center; gap: 12px; padding: 10px 4px; border-bottom: 1px solid var(--border); }
+  .rankrow:last-child { border-bottom: none; }
+  .rankrow .rank { font-weight: 700; color: var(--ink-3); font-size: 12px; width: 18px; flex: 0 0 auto; }
+  .rankrow .nm { flex: 1; min-width: 0; font-weight: 600; font-size: 13.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .rankrow .q { font-size: 12px; color: var(--ink-3); font-weight: 500; }
+  .rankrow .rev { font-weight: 700; font-size: 13.5px; font-variant-numeric: tabular-nums; }
+  .bar { height: 4px; background: var(--accent-tint); border-radius: 2px; margin-top: 5px; overflow: hidden; }
+  .bar i { display: block; height: 100%; background: var(--accent); border-radius: 2px; }
 
-  /* auth + onboarding */
-  .center-screen { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; gap: 8px; }
-  .center-screen .logo { font-family: 'Baloo 2', cursive; font-size: 34px; font-weight: 800; color: var(--p); }
-  .center-screen .sub { color: var(--ink-soft); font-weight: 700; font-size: 14px; margin-bottom: 16px; text-align: center; }
+  /* ===== auth + onboarding ===== */
+  .gate-screen { min-height: 100vh; display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 24px; }
+  .gate-screen .product { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+  .gate-screen .product .mark { width: 34px; height: 34px; font-size: 14px; }
+  .gate-screen .product .n { font-weight: 800; font-size: 19px; letter-spacing: -.02em; }
+  .gate-screen .sub { color: var(--ink-2); font-weight: 500; font-size: 13.5px; margin-bottom: 22px; text-align: center; line-height: 1.5; }
   .auth-card { width: 100%; max-width: 380px; }
-  .code-note { margin-top: 12px; padding: 12px; background: var(--w-soft); border-radius: 12px; font-weight: 700; font-size: 13.5px; color: var(--w-ink); display: none; }
+  .auth-card h2 { font-size: 17px; font-weight: 700; text-transform: none; letter-spacing: -.01em; color: var(--ink); margin-bottom: 16px; }
+  .code-note { margin-top: 12px; padding: 12px 14px; background: var(--warn-tint); border-radius: var(--r);
+    font-weight: 500; font-size: 13px; color: var(--warn-ink); display: none; }
   .code-note.show { display: block; }
-  .code-note .big { font-family: 'Baloo 2', cursive; font-size: 26px; letter-spacing: 6px; color: var(--ink); }
-  .err { color: var(--p-dark); font-weight: 800; font-size: 13.5px; min-height: 18px; margin-top: 8px; }
+  .code-note .big { font-size: 24px; letter-spacing: 8px; color: var(--ink); font-weight: 800; font-variant-numeric: tabular-nums; }
+  .err { color: var(--danger); font-weight: 600; font-size: 13px; min-height: 18px; margin-top: 8px; }
 
-  .cat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
-  .cat-card { border: 2px solid var(--line); border-radius: 16px; padding: 14px 12px; cursor: pointer; background: #fff; text-align: left; font-family: 'Nunito', sans-serif; }
-  .cat-card .em { font-size: 24px; }
-  .cat-card .nm { font-weight: 800; font-size: 14px; margin-top: 4px; }
-  .cat-card .d { font-size: 11.5px; color: var(--ink-soft); font-weight: 700; margin-top: 2px; }
-  .cat-card.active { border-color: var(--p); background: var(--p-soft); }
+  .steps { display: flex; gap: 5px; margin-bottom: 18px; }
+  .steps span { flex: 1; height: 4px; border-radius: 2px; background: var(--border); }
+  .steps span.on { background: var(--accent); }
+  .ob-title { font-size: 19px; font-weight: 800; letter-spacing: -.02em; margin-bottom: 4px; }
+  .ob-sub { color: var(--ink-2); font-size: 13.5px; font-weight: 500; margin-bottom: 16px; }
+  .cat-grid { display: grid; grid-template-columns: 1fr; gap: 8px; }
+  .cat-card { border: 1px solid var(--border-strong); border-radius: var(--r); padding: 13px 14px; cursor: pointer;
+    background: var(--surface); text-align: left; font-family: inherit; display: flex; align-items: center; gap: 12px; }
+  .cat-card .ic { width: 36px; height: 36px; border-radius: 8px; background: var(--bg); border: 1px solid var(--border);
+    display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 14px; color: var(--ink-2); flex: 0 0 auto; }
+  .cat-card .nm { font-weight: 700; font-size: 14.5px; }
+  .cat-card .d { font-size: 12px; color: var(--ink-3); font-weight: 500; margin-top: 1px; }
+  .cat-card.active { border-color: var(--accent); background: var(--accent-tint); }
+  .cat-card.active .ic { background: var(--accent); border-color: var(--accent); color: #fff; }
   .theme-chips { display: flex; gap: 10px; flex-wrap: wrap; }
-  .theme-chip { width: 44px; height: 44px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; }
-  .theme-chip.active { border-color: var(--ink); }
-  .steps { display: flex; gap: 6px; margin-bottom: 14px; }
-  .steps span { flex: 1; height: 5px; border-radius: 3px; background: var(--line); }
-  .steps span.on { background: var(--p); }
+  .theme-chip { width: 38px; height: 38px; border-radius: 10px; cursor: pointer; border: 2px solid transparent; outline: 2px solid transparent; outline-offset: 2px; }
+  .theme-chip.active { outline-color: var(--ink); }
 
-  .catrow { display: grid; grid-template-columns: 1fr 110px 34px; gap: 8px; margin-bottom: 8px; align-items: center; }
-  .catrow input { min-height: 44px; padding: 8px 12px; font-size: 14px; }
-  .catrow button { border: none; background: var(--p-soft); color: var(--p); width: 32px; height: 32px; border-radius: 50%; cursor: pointer; }
+  .catrow { display: grid; grid-template-columns: 1fr 108px 32px; gap: 8px; margin-bottom: 8px; align-items: center; }
+  .catrow input { min-height: 42px; padding: 8px 12px; font-size: 14px; }
+  .catrow button { border: none; background: none; color: var(--ink-3); width: 30px; height: 30px; border-radius: 8px; cursor: pointer; }
+  .catrow button:hover { background: var(--danger-tint); color: var(--danger); }
 
-  .toast { position: fixed; bottom: calc(130px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%);
-    background: var(--ink); color: #fff; font-weight: 800; font-size: 14px; padding: 10px 18px; border-radius: 999px;
+  .toast { position: fixed; bottom: calc(126px + env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%);
+    background: var(--ink); color: #fff; font-weight: 600; font-size: 13.5px; padding: 10px 18px; border-radius: var(--r);
     z-index: 99; opacity: 0; transition: opacity .2s; pointer-events: none; max-width: 90vw; text-align: center; }
   .toast.show { opacity: 1; }
 </style>
 </head>
-<body data-theme="rose">
+<body>
 
 <!-- ============ AUTH ============ -->
-<div id="authView" class="center-screen hidden">
-  <div class="logo">🧾 Invoice App</div>
-  <div class="sub">Branded invoices, labels &amp; customer records<br>for your business — right from your phone.</div>
-  <div class="panel auth-card">
+<div id="authView" class="gate-screen hidden">
+  <div class="product"><div class="mark">In</div><div class="n">Invoice App</div></div>
+  <div class="sub">Branded invoices, package labels and customer records<br>for your business — from any device.</div>
+  <div class="card auth-card">
     <div id="authStep1">
-      <div class="field"><label for="authEmail">Email</label>
+      <h2>Sign in</h2>
+      <div class="field"><label for="authEmail">Email address</label>
         <input type="email" id="authEmail" placeholder="you@example.com" autocomplete="email"></div>
-      <button class="btn btn-primary" id="authSend">Send sign-in code</button>
+      <button class="btn btn-primary" id="authSend">Continue</button>
     </div>
     <div id="authStep2" class="hidden">
-      <div class="field"><label for="authCode">Enter the 6-digit code sent to <span id="authEmailEcho"></span></label>
-        <input type="tel" id="authCode" placeholder="••••••" maxlength="6" inputmode="numeric" autocomplete="one-time-code"></div>
+      <h2>Check your email</h2>
+      <div class="field"><label for="authCode">6-digit code sent to <span id="authEmailEcho"></span></label>
+        <input type="tel" id="authCode" placeholder="000000" maxlength="6" inputmode="numeric" autocomplete="one-time-code"></div>
       <button class="btn btn-primary" id="authVerify">Sign in</button>
-      <div class="code-note" id="devCodeNote">No email service configured yet — your code is:<br><span class="big" id="devCode"></span></div>
-      <button class="btn btn-quiet" id="authBack" style="width:100%;margin-top:10px">← Different email</button>
+      <div class="code-note" id="devCodeNote">No email service is configured, so here is your code:<br><span class="big" id="devCode"></span></div>
+      <button class="btn btn-ghost" id="authBack" style="width:100%;margin-top:10px">Use a different email</button>
     </div>
     <div class="err" id="authErr"></div>
   </div>
-  <div class="muted" style="margin-top:8px">You stay signed in on this device until you sign out.</div>
+  <div class="muted" style="margin-top:10px">You stay signed in on this device until you sign out.</div>
 </div>
 
 <!-- ============ ONBOARDING ============ -->
 <div id="onboardView" class="hidden">
   <div class="wrap" style="padding-bottom:24px">
-    <div class="panel">
+    <div class="card">
       <div class="steps"><span id="st1"></span><span id="st2"></span><span id="st3"></span></div>
 
       <div id="obStep1">
-        <h2>👋 What kind of business do you run?</h2>
+        <div class="ob-title">What kind of business do you run?</div>
+        <div class="ob-sub">This sets up your starter catalogue and tools. Everything can be changed later.</div>
         <div class="cat-grid" id="catGrid"></div>
-        <div class="muted" style="margin-top:10px">This sets up your starter catalogue and tools. You can change everything later.</div>
-        <button class="btn btn-primary" id="obNext1" style="margin-top:14px" disabled>Continue</button>
+        <button class="btn btn-primary" id="obNext1" style="margin-top:16px" disabled>Continue</button>
       </div>
 
       <div id="obStep2" class="hidden">
-        <h2>🏪 Your brand</h2>
+        <div class="ob-title">Your brand</div>
+        <div class="ob-sub">This appears on every invoice and label you send.</div>
         <div class="field"><label>Business name *</label><input type="text" id="obName" maxlength="60" placeholder="e.g. Bella Stitches"></div>
-        <div class="field"><label>Slogan (optional)</label><input type="text" id="obSlogan" maxlength="80" placeholder="e.g. Fits that flatter"></div>
+        <div class="field"><label>Tagline (optional)</label><input type="text" id="obSlogan" maxlength="80" placeholder="e.g. Made to measure"></div>
         <div class="row2">
           <div class="field"><label>Phone</label><input type="tel" id="obPhone" placeholder="080..."></div>
           <div class="field"><label>Social handle</label><input type="text" id="obSocial" placeholder="@yourbrand"></div>
         </div>
-        <div class="field"><label>Brand colour</label><div class="theme-chips" id="obThemes"></div></div>
+        <div class="field"><label>Accent colour</label><div class="theme-chips" id="obThemes"></div></div>
         <button class="btn btn-primary" id="obNext2" style="margin-top:6px">Continue</button>
-        <button class="btn btn-quiet" id="obBack2" style="width:100%;margin-top:10px">← Back</button>
+        <button class="btn btn-ghost" id="obBack2" style="width:100%;margin-top:10px">Back</button>
       </div>
 
       <div id="obStep3" class="hidden">
-        <h2>💳 How customers pay you</h2>
+        <div class="ob-title">Payments &amp; catalogue</div>
+        <div class="ob-sub">Bank details shown on invoices, and the items you sell.</div>
         <div class="field"><label>Account name</label><input type="text" id="obAcctName" placeholder="Business account name"></div>
         <div class="row2">
           <div class="field"><label>Bank</label><input type="text" id="obBank" placeholder="e.g. Moniepoint"></div>
           <div class="field"><label>Account number</label><input type="tel" id="obAcctNo" placeholder="0000000000"></div>
         </div>
         <div class="field"><label>Invoice number prefix</label><input type="text" id="obPrefix" maxlength="6" placeholder="e.g. BS" style="text-transform:uppercase"></div>
-        <h2 style="margin-top:16px">🎒 Starter catalogue</h2>
-        <div class="muted" style="margin-bottom:8px">Your items with usual prices — shown as quick picks when invoicing. Edit freely.</div>
+        <label style="margin-top:16px">Starter catalogue — items and usual prices</label>
         <div id="obCat"></div>
-        <button class="btn btn-add" id="obCatAdd" style="min-height:44px">+ Add item</button>
-        <button class="btn btn-primary" id="obFinish" style="margin-top:14px">Finish — open my workspace 🎉</button>
-        <button class="btn btn-quiet" id="obBack3" style="width:100%;margin-top:10px">← Back</button>
+        <button class="btn btn-add" id="obCatAdd" style="min-height:42px">+ Add item</button>
+        <button class="btn btn-primary" id="obFinish" style="margin-top:16px">Finish setup</button>
+        <button class="btn btn-ghost" id="obBack3" style="width:100%;margin-top:10px">Back</button>
         <div class="err" id="obErr"></div>
       </div>
     </div>
@@ -342,117 +370,118 @@
 
 <!-- ============ MAIN APP ============ -->
 <div id="appView" class="hidden">
-  <div class="topbar">
-    <div class="avatar" id="bizAvatar">?</div>
-    <div>
-      <div class="brand" id="bizName">—</div>
-      <div class="tag" id="bizSlogan"></div>
+  <div class="appbar">
+    <div class="mark" id="bizAvatar">?</div>
+    <div class="biz">
+      <div class="n" id="bizName">—</div>
+      <div class="s" id="bizSlogan"></div>
     </div>
   </div>
 
   <!-- TAB: invoice -->
   <div class="wrap" id="tab-invoice">
-    <div class="panel form-panel">
+    <div class="card form-panel">
       <div class="section">
-        <h2>🙋 Customer</h2>
+        <h2>Customer</h2>
         <div class="field"><label for="custName">Name</label>
           <input type="text" id="custName" placeholder="Customer name" autocomplete="off" list="custList">
           <datalist id="custList"></datalist></div>
         <div class="field"><label for="custPhone">WhatsApp / phone (optional)</label>
           <input type="tel" id="custPhone" placeholder="080..." inputmode="tel" autocomplete="off"></div>
-        <div class="field"><label for="custAddr">Delivery address (for package label)</label>
+        <div class="field"><label for="custAddr">Delivery address (used on the package label)</label>
           <textarea id="custAddr" rows="2" placeholder="Street, area, city"></textarea></div>
       </div>
       <div class="section">
-        <h2>🎒 Items</h2>
+        <h2>Items</h2>
         <div id="items"></div>
         <button class="btn btn-add" id="addItem">+ Add another item</button>
       </div>
       <div class="section">
-        <h2>🚚 Extras</h2>
+        <h2>Charges</h2>
         <div class="row2">
           <div class="field"><label for="delivery">Delivery fee</label>
             <input type="number" id="delivery" min="0" placeholder="0" inputmode="numeric"></div>
           <div class="field"><label for="discount">Discount</label>
             <input type="number" id="discount" min="0" placeholder="0" inputmode="numeric"></div>
         </div>
-        <div class="field"><label for="notes">Extra note (optional)</label>
+        <div class="field"><label for="notes">Note (optional)</label>
           <textarea id="notes" rows="2" placeholder="e.g. Delivery on Friday"></textarea></div>
-        <button class="btn btn-quiet" id="newBtn">🆕 Start new invoice</button>
+        <button class="btn btn-ghost" id="newBtn">Start a new invoice</button>
       </div>
     </div>
 
-    <div class="invoice" id="invoice">
-      <div class="inv-head">
-        <div class="inv-brand">
-          <div class="avatar" id="invAvatar">?</div>
-          <div>
-            <div class="name" id="invBizName">—</div>
-            <div class="slogan" id="invBizSlogan"></div>
-            <div class="contact" id="invBizContact"></div>
+    <div class="doc" id="invoice">
+      <div class="doc-inner">
+        <div class="doc-top">
+          <div class="doc-brand">
+            <div class="mark" id="invAvatar">?</div>
+            <div>
+              <div class="n" id="invBizName">—</div>
+              <div class="s" id="invBizSlogan"></div>
+              <div class="c" id="invBizContact"></div>
+            </div>
+          </div>
+          <div class="doc-meta">
+            <div class="t" id="invTitle">Invoice</div>
+            <div class="no" id="invNo">—</div>
+            <div class="d" id="invDate"></div>
           </div>
         </div>
-        <div class="inv-meta">
-          <div class="title" id="invTitle">Invoice</div>
-          <div id="invNo">—</div>
-          <div class="muted" id="invDate"></div>
-        </div>
-      </div>
-      <div class="inv-body">
-        <div class="inv-to">
-          <div class="lbl">Billed to</div>
+        <div class="doc-rule"></div>
+        <div class="doc-to">
+          <div class="l">Billed to</div>
           <div class="who" id="invCust">—</div>
-          <div class="phone" id="invPhone"></div>
+          <div class="ph" id="invPhone"></div>
         </div>
-        <table class="inv-table">
+        <table class="doc-table">
           <thead><tr><th>Item</th><th class="ctr">Qty</th><th class="num">Price</th><th class="num">Amount</th></tr></thead>
           <tbody id="invRows"></tbody>
         </table>
-        <div class="inv-totals"><table><tbody id="invTotals"></tbody></table></div>
-        <div class="inv-pay" id="invPayBox" style="display:none">
-          <div class="lbl">Payment details</div>
+        <div class="doc-totals"><table><tbody id="invTotals"></tbody></table></div>
+        <div class="doc-pay" id="invPayBox" style="display:none">
+          <div class="l">Payment details</div>
           <div id="invPayRows"></div>
         </div>
-        <div class="inv-notes" id="invNotesBox" style="display:none">
-          <div class="lbl">Note</div><div id="invNotes"></div>
+        <div class="doc-note" id="invNotesBox" style="display:none">
+          <div class="l">Note</div><div id="invNotes"></div>
         </div>
-        <div class="inv-foot"><span id="invFootMain"></span><div class="sub" id="invFootSub"></div></div>
+        <div class="doc-foot"><div class="main" id="invFootMain"></div><div id="invFootSub"></div></div>
       </div>
     </div>
   </div>
 
   <!-- TAB: customers -->
   <div class="wrap hidden" id="tab-customers">
-    <div class="panel">
-      <h2>👥 Customers</h2>
-      <div class="field"><input type="text" id="custSearch" placeholder="Search name or phone…"></div>
-      <button class="btn btn-add" id="custAdd" style="min-height:44px;margin-bottom:12px">+ Add customer</button>
+    <div class="card">
+      <h2>Customers</h2>
+      <div class="field"><input type="text" id="custSearch" placeholder="Search name or phone"></div>
+      <button class="btn btn-add" id="custAdd" style="min-height:42px;margin-bottom:12px">+ Add customer</button>
       <div id="custListView"></div>
     </div>
   </div>
 
   <!-- TAB: history -->
   <div class="wrap hidden" id="tab-history">
-    <div class="panel">
-      <h2>🕘 Invoice history</h2>
+    <div class="card">
+      <h2>Invoice history</h2>
       <div id="histList"></div>
     </div>
   </div>
 
   <!-- TAB: sales -->
   <div class="wrap hidden" id="tab-sales">
-    <div class="panel">
-      <h2>📊 Sales</h2>
+    <div class="card">
+      <h2>Sales</h2>
       <div id="salesContent"></div>
     </div>
   </div>
 
   <!-- TAB: settings -->
   <div class="wrap hidden" id="tab-settings">
-    <div class="panel">
-      <h2>🏪 Brand</h2>
+    <div class="card">
+      <h2>Brand</h2>
       <div class="field"><label>Business name</label><input type="text" id="setName" maxlength="60"></div>
-      <div class="field"><label>Slogan</label><input type="text" id="setSlogan" maxlength="80"></div>
+      <div class="field"><label>Tagline</label><input type="text" id="setSlogan" maxlength="80"></div>
       <div class="row2">
         <div class="field"><label>Phone</label><input type="tel" id="setPhone"></div>
         <div class="field"><label>Social handle</label><input type="text" id="setSocial"></div>
@@ -461,57 +490,64 @@
         <div class="field"><label>Invoice prefix</label><input type="text" id="setPrefix" maxlength="6" style="text-transform:uppercase"></div>
         <div class="field"><label>WhatsApp country code</label><input type="tel" id="setDial" maxlength="4" placeholder="234"></div>
       </div>
-      <div class="field"><label>Footer note (shows on invoice)</label><input type="text" id="setFooter" maxlength="200" placeholder="e.g. Call or DM to order · Nationwide delivery"></div>
-      <div class="field"><label>Brand colour</label><div class="theme-chips" id="setThemes"></div></div>
+      <div class="field"><label>Invoice footer line</label><input type="text" id="setFooter" maxlength="200" placeholder="e.g. Call or DM to order · Nationwide delivery"></div>
+      <div class="field"><label>Accent colour</label><div class="theme-chips" id="setThemes"></div></div>
     </div>
-    <div class="panel">
-      <h2>💳 Payment details</h2>
+    <div class="card">
+      <h2>Payment details</h2>
       <div class="field"><label>Account name</label><input type="text" id="setAcctName"></div>
       <div class="row2">
         <div class="field"><label>Bank</label><input type="text" id="setBank"></div>
         <div class="field"><label>Account number</label><input type="tel" id="setAcctNo"></div>
       </div>
     </div>
-    <div class="panel">
-      <h2>🎒 Catalogue &amp; prices</h2>
-      <div class="muted" style="margin-bottom:8px">These become the item dropdown and quick-price buttons.</div>
+    <div class="card">
+      <h2>Catalogue &amp; prices</h2>
+      <div class="muted" style="margin-bottom:10px">These power the item dropdown and quick-price buttons.</div>
       <div id="setCat"></div>
-      <button class="btn btn-add" id="setCatAdd" style="min-height:44px">+ Add item</button>
+      <button class="btn btn-add" id="setCatAdd" style="min-height:42px">+ Add item</button>
     </div>
-    <div class="panel" id="tplPanel">
-      <h2>📏 Measurement templates</h2>
-      <div class="muted" style="margin-bottom:8px">Field lists used when recording a client's measurements.</div>
+    <div class="card" id="tplPanel">
+      <h2>Measurement templates</h2>
+      <div class="muted" style="margin-bottom:10px">Field lists used when recording a client's measurements.</div>
       <div id="tplList"></div>
-      <button class="btn btn-add" id="tplAdd" style="min-height:44px">+ New template</button>
+      <button class="btn btn-add" id="tplAdd" style="min-height:42px">+ New template</button>
     </div>
-    <div class="panel">
-      <button class="btn btn-primary" id="setSave">💾 Save settings</button>
+    <div class="card">
+      <button class="btn btn-primary" id="setSave">Save settings</button>
       <div id="adminLinkWrap" class="hidden" style="margin-top:12px">
-        <a class="btn btn-quiet" href="/admin" style="display:block;text-align:center;text-decoration:none">🛠️ Open admin panel</a>
+        <a class="btn btn-ghost" href="/admin" style="display:block;text-align:center;text-decoration:none">Open admin panel</a>
       </div>
-      <button class="btn btn-quiet" id="signOut" style="width:100%;margin-top:12px">Sign out on this device</button>
-      <button class="btn btn-quiet" id="signOutAll" style="width:100%;margin-top:10px">Sign out everywhere</button>
-      <div class="muted" style="margin-top:10px;text-align:center" id="whoami"></div>
+      <button class="btn btn-ghost" id="signOut" style="width:100%;margin-top:12px">Sign out on this device</button>
+      <button class="btn btn-ghost" id="signOutAll" style="width:100%;margin-top:10px">Sign out everywhere</button>
+      <div class="muted" style="margin-top:12px;text-align:center" id="whoami"></div>
     </div>
   </div>
 
   <!-- dock (invoice tab only) -->
   <div class="dock" id="dock">
-    <div class="total-line"><span class="lbl">TOTAL</span><span class="val" id="dockTotal">0</span></div>
-    <div class="btns">
-      <button class="btn b-pdf" id="printBtn">📄 PDF</button>
-      <button class="btn b-img" id="imgBtn">🖼️ Image</button>
-      <button class="btn b-lbl" id="labelBtn">🏷️ Label</button>
-      <button class="btn b-wa" id="waBtn">📲 Send</button>
+    <div class="inner">
+      <div class="total"><div class="l">Total</div><div class="v" id="dockTotal">0</div></div>
+      <div class="btns">
+        <button class="btn b-pdf" id="printBtn">PDF</button>
+        <button class="btn b-img" id="imgBtn">Image</button>
+        <button class="btn b-lbl" id="labelBtn">Label</button>
+        <button class="btn b-wa" id="waBtn">WhatsApp</button>
+      </div>
     </div>
   </div>
 
   <div class="tabbar">
-    <button data-tab="invoice" class="active"><span class="ico">🧾</span>New</button>
-    <button data-tab="customers"><span class="ico">👥</span>Customers</button>
-    <button data-tab="history"><span class="ico">🕘</span>History</button>
-    <button data-tab="sales"><span class="ico">📊</span>Sales</button>
-    <button data-tab="settings"><span class="ico">⚙️</span>Settings</button>
+    <button data-tab="invoice" class="active">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M7 3h10a1 1 0 0 1 1 1v17l-3-2-3 2-3-2-3 2V4a1 1 0 0 1 1-1z"/><path d="M9 8h6M9 12h6"/></svg>Invoice</button>
+    <button data-tab="customers">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><circle cx="9" cy="8" r="3.2"/><path d="M3.5 19c.6-3 2.8-4.5 5.5-4.5S13.9 16 14.5 19"/><circle cx="16.5" cy="9.5" r="2.5"/><path d="M16 14.7c2.3.2 4 1.6 4.5 4.3"/></svg>Customers</button>
+    <button data-tab="history">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><circle cx="12" cy="12" r="8.5"/><path d="M12 7v5l3.5 2"/></svg>History</button>
+    <button data-tab="sales">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><path d="M4 20h16"/><path d="M6 20v-6M11 20V9M16 20v-10M21 20V5" transform="translate(-1.5)"/></svg>Sales</button>
+    <button data-tab="settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M12 3.5v2.6M12 17.9v2.6M3.5 12h2.6M17.9 12h2.6M6 6l1.9 1.9M16.1 16.1 18 18M18 6l-1.9 1.9M7.9 16.1 6 18"/></svg>Settings</button>
   </div>
 </div>
 
@@ -525,29 +561,27 @@
 <!-- record entry sheet -->
 <div class="overlay" id="recOverlay"></div>
 <div class="sheet" id="recSheet">
-  <div class="sheet-head"><h2 id="recSheetTitle">📏 Measurements</h2><button class="closer" id="recSheetClose">✕</button></div>
+  <div class="sheet-head"><h2 id="recSheetTitle">Measurements</h2><button class="closer" id="recSheetClose">✕</button></div>
   <div class="sheet-body" id="recSheetBody"></div>
 </div>
 
 <!-- offscreen: package label -->
 <div class="label" id="label">
-  <div>
-    <div class="lbl-logo" id="lblBiz"></div>
-    <div class="lbl-slogan" id="lblSlogan"></div>
-  </div>
-  <div class="lbl-bar">DELIVER TO</div>
-  <div class="lbl-fields">
+  <div class="frame">
+    <div class="lbl-head">
+      <div class="lbl-biz" id="lblBiz"></div>
+      <div class="lbl-tag" id="lblSlogan"></div>
+    </div>
+    <div class="lbl-ship">SHIP TO</div>
     <div class="lbl-row"><span class="lbl-k">Name</span><span class="lbl-line" id="lblName"></span></div>
     <div class="lbl-row"><span class="lbl-k">Address</span><span class="lbl-line lbl-2" id="lblAddr"></span></div>
     <div class="lbl-cols">
       <div class="lbl-row"><span class="lbl-k">Phone</span><span class="lbl-line" id="lblPhone"></span></div>
       <div class="lbl-row"><span class="lbl-k">Date</span><span class="lbl-line" id="lblDate"></span></div>
     </div>
-    <div class="lbl-row" style="margin-bottom:6px"><span class="lbl-k">Item / Qty</span></div>
     <div class="lbl-items" id="lblItems"></div>
+    <div class="lbl-foot" id="lblFrom"></div>
   </div>
-  <div class="lbl-care">★&nbsp;&nbsp;HANDLE WITH CARE&nbsp;&nbsp;★</div>
-  <div class="lbl-from" id="lblFrom"></div>
 </div>
 
 <!-- offscreen: measurement card -->
@@ -588,14 +622,14 @@ async function api(method, url, body) {
   return data;
 }
 
-const THEMES = ['rose', 'ocean', 'forest', 'royal', 'sunset'];
-const THEME_COLORS = { rose:'#e0447c', ocean:'#2f6fed', forest:'#2e8b57', royal:'#7b4dcf', sunset:'#e8590c' };
+const THEMES = ['indigo', 'teal', 'emerald', 'amber', 'crimson', 'slate'];
+const THEME_COLORS = { indigo:'#444ce7', teal:'#0d8a8a', emerald:'#12855c', amber:'#b45309', crimson:'#b42145', slate:'#3d4654' };
 const CAT_META = {
-  seller: { em:'🛍️', d:'Clothes, thrift, skincare & more' },
-  tailor: { em:'✂️', d:'Sewing, styles & client measurements' },
-  food:   { em:'🍲', d:'Meals, trays & catering orders' },
-  services:{ em:'💅', d:'Hair, makeup, lessons, home service' },
-  other:  { em:'📦', d:'Everything else' }
+  seller:  { d: 'Clothes, thrift, skincare and more' },
+  tailor:  { d: 'Sewing, styles and client measurements' },
+  food:    { d: 'Meals, trays and catering orders' },
+  services:{ d: 'Hair, makeup, lessons, home service' },
+  other:   { d: 'Everything else' }
 };
 
 function themeChips(container, current, onPick) {
@@ -663,7 +697,7 @@ $('authCode').addEventListener('keydown', e => { if (e.key === 'Enter') $('authV
 $('authEmail').addEventListener('keydown', e => { if (e.key === 'Enter') $('authSend').click(); });
 
 /* ================= onboarding ================= */
-const ob = { category: null, theme: 'rose', catalogue: [] };
+const ob = { category: null, theme: 'indigo', catalogue: [] };
 let obInited = false;
 
 function initOnboarding() {
@@ -673,7 +707,7 @@ function initOnboarding() {
     const m = CAT_META[c.slug] || CAT_META.other;
     const b = document.createElement('button');
     b.type = 'button'; b.className = 'cat-card';
-    b.innerHTML = `<span class="em">${m.em}</span><div class="nm">${esc(c.name)}</div><div class="d">${esc(m.d)}</div>`;
+    b.innerHTML = `<span class="ic">${esc(c.name.slice(0, 1))}</span><span><span class="nm">${esc(c.name)}</span><div class="d">${esc(m.d)}</div></span>`;
     b.addEventListener('click', () => {
       grid.querySelectorAll('.cat-card').forEach(x => x.classList.remove('active'));
       b.classList.add('active'); ob.category = c; $('obNext1').disabled = false;
@@ -721,7 +755,7 @@ $('obFinish').addEventListener('click', async () => {
       invoicePrefix: $('obPrefix').value, catalogue: ob.catalogue
     });
     await boot();
-    toast('Welcome! Your workspace is ready 🎉');
+    toast('Your workspace is ready');
   } catch (e) { $('obErr').textContent = e.message; }
   finally { $('obFinish').disabled = false; }
 });
@@ -730,21 +764,21 @@ obStep(1);
 /* ================= business → UI ================= */
 function applyBusiness() {
   const b = state.business;
-  document.body.dataset.theme = b.theme || 'rose';
+  document.body.dataset.theme = THEMES.includes(b.theme) ? b.theme : 'indigo';
   document.title = b.name + ' — ' + b.docNoun + 's';
   $('bizAvatar').textContent = $('invAvatar').textContent = initials(b.name);
   $('bizName').textContent = $('invBizName').textContent = b.name;
   $('bizSlogan').textContent = $('invBizSlogan').textContent = b.slogan || '';
-  $('invBizContact').textContent = [b.contactPhone && '📞 ' + b.contactPhone, b.socialHandle].filter(Boolean).join(' · ');
+  $('invBizContact').textContent = [b.contactPhone, b.socialHandle].filter(Boolean).join(' · ');
   $('invTitle').textContent = b.docNoun;
-  $('invFootMain').textContent = 'Thank you for choosing ' + b.name + '! 💛';
+  $('invFootMain').textContent = 'Thank you for your order.';
   $('invFootSub').textContent = b.footerNote || '';
   const pays = b.payments || [];
   $('invPayBox').style.display = pays.length ? '' : 'none';
   $('invPayRows').innerHTML = pays.map(p => `
     ${p.account_name ? `<div class="row"><span>Account name</span><b>${esc(p.account_name)}</b></div>` : ''}
     ${p.bank ? `<div class="row"><span>Bank</span><b>${esc(p.bank)}</b></div>` : ''}
-    <div class="row"><span>Account number</span><b class="acct">${esc(p.account_number)}</b></div>`).join('');
+    <div class="row"><span>Account number</span><b>${esc(p.account_number)}</b></div>`).join('');
   // settings form
   $('setName').value = b.name; $('setSlogan').value = b.slogan || '';
   $('setPhone').value = b.contactPhone || ''; $('setSocial').value = b.socialHandle || '';
@@ -844,18 +878,18 @@ function totals() {
 function render() {
   if (!state.business) return;
   const { items, delivery, discount, subtotal, total } = totals();
-  $('invNo').textContent = draft.number || (state.business.invoicePrefix + '-…draft');
+  $('invNo').textContent = draft.number || (state.business.invoicePrefix + '-DRAFT');
   $('invDate').textContent = new Date().toLocaleDateString('en-NG', { day: 'numeric', month: 'long', year: 'numeric' });
   $('invCust').textContent = $('custName').value.trim() || '—';
   $('invPhone').textContent = $('custPhone').value.trim();
   $('invRows').innerHTML = items.length
-    ? items.map(i => `<tr><td><b>${esc(i.name)}</b></td><td class="ctr">${i.qty}</td>
+    ? items.map(i => `<tr><td>${esc(i.name)}</td><td class="ctr">${i.qty}</td>
         <td class="num">${fmt(i.price)}</td><td class="num">${fmt(i.amount)}</td></tr>`).join('')
-    : '<tr><td colspan="4"><div class="empty-hint">Add items above to build the ' + esc(state.business.docNoun.toLowerCase()) + ' 🎈</div></td></tr>';
+    : '<tr><td colspan="4"><div class="empty-hint">Add items above to build the ' + esc(state.business.docNoun.toLowerCase()) + '.</div></td></tr>';
   let t = `<tr><td>Subtotal</td><td class="num">${fmt(subtotal)}</td></tr>`;
   if (delivery) t += `<tr><td>Delivery</td><td class="num">${fmt(delivery)}</td></tr>`;
   if (discount) t += `<tr><td>Discount</td><td class="num">−${fmt(discount)}</td></tr>`;
-  t += `<tr class="grand"><td>TOTAL</td><td class="num">${fmt(total)}</td></tr>`;
+  t += `<tr class="grand"><td>Total</td><td class="num">${fmt(total)}</td></tr>`;
   $('invTotals').innerHTML = t;
   $('dockTotal').textContent = fmt(total);
   const notes = $('notes').value.trim();
@@ -914,7 +948,7 @@ $('newBtn').addEventListener('click', async () => {
 /* ================= exports ================= */
 async function withBusy(btn, idleHtml, fn) {
   if (typeof html2canvas === 'undefined') { toast('Export tool is still loading — try again in a second.'); return; }
-  btn.disabled = true; btn.textContent = '⏳';
+  btn.disabled = true; btn.textContent = '…';
   try { await fn(); }
   catch (e) { toast(e.message); }
   finally { btn.disabled = false; btn.innerHTML = idleHtml; }
@@ -931,7 +965,7 @@ async function shareOrDownload(file) {
 const capture = (el, scale) => html2canvas(el, { scale, backgroundColor: '#ffffff', useCORS: true });
 const fileStem = () => state.business.name.replace(/[^A-Za-z0-9]+/g, '') || 'Invoice';
 
-$('printBtn').addEventListener('click', () => withBusy($('printBtn'), '📄 PDF', async () => {
+$('printBtn').addEventListener('click', () => withBusy($('printBtn'), 'PDF', async () => {
   if (!window.jspdf) throw new Error('PDF tool is still loading — try again in a second.');
   await persistInvoice();
   const canvas = await capture($('invoice'), 3);
@@ -944,14 +978,14 @@ $('printBtn').addEventListener('click', () => withBusy($('printBtn'), '📄 PDF'
   await shareOrDownload(new File([pdf.output('blob')], `${fileStem()}-${draft.number}.pdf`, { type: 'application/pdf' }));
 }));
 
-$('imgBtn').addEventListener('click', () => withBusy($('imgBtn'), '🖼️ Image', async () => {
+$('imgBtn').addEventListener('click', () => withBusy($('imgBtn'), 'Image', async () => {
   await persistInvoice();
   const canvas = await capture($('invoice'), 3);
   const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
   await shareOrDownload(new File([blob], `${fileStem()}-${draft.number}.png`, { type: 'image/png' }));
 }));
 
-$('labelBtn').addEventListener('click', () => withBusy($('labelBtn'), '🏷️ Label', async () => {
+$('labelBtn').addEventListener('click', () => withBusy($('labelBtn'), 'Label', async () => {
   await persistInvoice();
   const b = state.business;
   const { items } = totals();
@@ -961,7 +995,7 @@ $('labelBtn').addEventListener('click', () => withBusy($('labelBtn'), '🏷️ L
   $('lblAddr').textContent = $('custAddr').value.trim();
   $('lblPhone').textContent = $('custPhone').value.trim();
   $('lblDate').textContent = new Date().toLocaleDateString('en-GB');
-  $('lblFrom').textContent = ['From ' + b.name, b.contactPhone, b.socialHandle].filter(Boolean).join('  ·  ');
+  $('lblFrom').textContent = ['FROM ' + b.name.toUpperCase(), b.contactPhone, b.socialHandle].filter(Boolean).join('  ·  ');
   const list = $('lblItems');
   list.className = 'lbl-items' + (items.length > 5 ? ' cols2' : '') + (items.length > 12 ? ' sz-s' : items.length > 5 ? ' sz-m' : '');
   list.innerHTML = items.length
@@ -977,7 +1011,7 @@ $('waBtn').addEventListener('click', async () => {
   const b = state.business;
   const { items, delivery, discount, subtotal, total } = totals();
   const name = $('custName').value.trim(), notes = $('notes').value.trim();
-  let msg = `🧾 *${b.name} ${b.docNoun} ${draft.number}*\n`;
+  let msg = `*${b.name} — ${b.docNoun} ${draft.number}*\n`;
   if (name) msg += `Customer: ${name}\n`;
   msg += `Date: ${new Date().toLocaleDateString('en-NG')}\n\n`;
   items.forEach(i => { msg += `• ${i.name} x${i.qty} @ ${fmt(i.price)} = ${fmt(i.amount)}\n`; });
@@ -986,9 +1020,9 @@ $('waBtn').addEventListener('click', async () => {
   if (discount) msg += `\nDiscount: −${fmt(discount)}`;
   msg += `\n*TOTAL: ${fmt(total)}*`;
   const pays = b.payments || [];
-  if (pays.length) msg += `\n\n💳 *Payment*\n${[pays[0].account_name, pays[0].bank, pays[0].account_number].filter(Boolean).join('\n')}`;
+  if (pays.length) msg += `\n\n*Payment*\n${[pays[0].account_name, pays[0].bank, pays[0].account_number].filter(Boolean).join('\n')}`;
   if (notes) msg += `\n\n${notes}`;
-  msg += `\n\n${b.name}${b.slogan ? ' 💛 ' + b.slogan : ''}${b.contactPhone ? '\n📞 ' + b.contactPhone : ''}`;
+  msg += `\n\n${b.name}${b.contactPhone ? ' · ' + b.contactPhone : ''}${b.socialHandle ? ' · ' + b.socialHandle : ''}`;
   const phone = $('custPhone').value.trim().replace(/\D/g, '');
   const target = phone ? (phone.startsWith('0') ? b.countryDial + phone.slice(1) : phone) : '';
   window.open(`https://wa.me/${target}?text=${encodeURIComponent(msg)}`, '_blank');
@@ -1013,18 +1047,18 @@ async function refreshHistory() {
   try { state.history = await api('GET', '/api/invoices'); } catch (e) { toast(e.message); return; }
   const host = $('histList');
   if (!state.history.length) {
-    host.innerHTML = '<div class="list-empty">No saved ' + esc(state.business.docNoun.toLowerCase()) + 's yet.<br>They save automatically when you export or send.</div>';
+    host.innerHTML = '<div class="list-empty">Nothing here yet. ' + esc(state.business.docNoun) + 's save automatically when you export or send.</div>';
     return;
   }
   host.innerHTML = state.history.map(e => `
     <div class="list-item" data-no="${esc(e.number)}">
       <div class="info">
-        <div class="t2" style="color:var(--a);font-weight:800">${esc(e.number)}</div>
-        <div class="t1">${esc(e.name || '—')}</div>
+        <span class="tag-no">${esc(e.number)}</span>
+        <div class="t1" style="margin-top:4px">${esc(e.name || '—')}</div>
         <div class="t2">${new Date(e.ts).toLocaleDateString('en-GB')} · ${e.items.reduce((s, i) => s + i.qty, 0)} item(s)</div>
       </div>
       <div class="amt">${fmt(e.total)}</div>
-      <button class="del">🗑</button>
+      <button class="del">✕</button>
     </div>`).join('');
   host.querySelectorAll('.list-item').forEach(el => {
     el.querySelector('.info').addEventListener('click', () => loadInvoice(el.dataset.no));
@@ -1053,19 +1087,21 @@ async function refreshSales() {
   let s;
   try { s = await api('GET', '/api/sales'); } catch (e) { toast(e.message); return; }
   const host = $('salesContent');
-  if (!s.orders) { host.innerHTML = '<div class="list-empty">No sales yet.<br>Totals build up as you export or send.</div>'; return; }
+  if (!s.orders) { host.innerHTML = '<div class="list-empty">No sales recorded yet. Totals build up as you export or send.</div>'; return; }
+  const maxRev = s.items.length ? s.items[0].revenue : 1;
   host.innerHTML = `
     <div class="stat-grid">
-      <div class="stat-tile"><div class="val">${fmt(s.totalSales)}</div><div class="lbl">Total Sales</div></div>
-      <div class="stat-tile pink"><div class="val">${s.orders}</div><div class="lbl">Orders</div></div>
-      <div class="stat-tile yellow"><div class="val">${s.unitsSold}</div><div class="lbl">Items Sold</div></div>
+      <div class="stat"><div class="v">${fmt(s.totalSales)}</div><div class="l">Total sales</div></div>
+      <div class="stat"><div class="v">${s.orders}</div><div class="l">Orders</div></div>
+      <div class="stat"><div class="v">${s.unitsSold}</div><div class="l">Items sold</div></div>
     </div>
     <div class="stat-grid" style="grid-template-columns:1fr">
-      <div class="stat-tile"><div class="val">${fmt(s.avgOrder)}</div><div class="lbl">Average Order Value</div></div>
+      <div class="stat"><div class="v">${fmt(s.avgOrder)}</div><div class="l">Average order value</div></div>
     </div>
-    <div class="subhead">Items sold, by revenue</div>` +
+    <div class="subhead">Items by revenue</div>` +
     s.items.map((i, ix) => `<div class="rankrow"><span class="rank">${ix + 1}</span>
-      <span class="nm">${esc(i.name)}</span><span class="q">×${i.qty}</span>
+      <span class="nm">${esc(i.name)}<span class="bar"><i style="width:${Math.max(4, Math.round(i.revenue / maxRev * 100))}%"></i></span></span>
+      <span class="q">×${i.qty}</span>
       <span class="rev">${fmt(i.revenue)}</span></div>`).join('');
 }
 
@@ -1075,15 +1111,15 @@ async function refreshCustomers() {
   try { state.customers = await api('GET', '/api/customers?q=' + encodeURIComponent(q)); } catch (e) { toast(e.message); return; }
   $('custList').innerHTML = state.customers.map(c => `<option value="${esc(c.name)}">`).join('');
   const host = $('custListView');
-  if (!state.customers.length) { host.innerHTML = '<div class="list-empty">No customers yet.<br>They appear automatically when you invoice them.</div>'; return; }
+  if (!state.customers.length) { host.innerHTML = '<div class="list-empty">No customers yet. They are added automatically when you invoice them.</div>'; return; }
   host.innerHTML = state.customers.map(c => `
     <div class="list-item" data-id="${c.id}">
-      <div class="avatar" style="width:38px;height:38px;font-size:14px">${esc(initials(c.name))}</div>
+      <div class="mark" style="width:34px;height:34px;font-size:12.5px;border-radius:8px;background:var(--accent-tint);color:var(--accent-ink)">${esc(initials(c.name))}</div>
       <div class="info">
         <div class="t1">${esc(c.name)}</div>
-        <div class="t2">${esc(c.phone || '')}${c.records ? ' · 📏 ' + c.records + ' record(s)' : ''}${c.invoices ? ' · 🧾 ' + c.invoices : ''}</div>
+        <div class="t2">${esc(c.phone || 'No phone')}${c.records ? ' · ' + c.records + ' record(s)' : ''}${c.invoices ? ' · ' + c.invoices + ' invoice(s)' : ''}</div>
       </div>
-      <button class="del">🗑</button>
+      <button class="del">✕</button>
     </div>`).join('');
   host.querySelectorAll('.list-item').forEach(el => {
     el.querySelector('.info').addEventListener('click', () => openCustomer(Number(el.dataset.id)));
@@ -1113,10 +1149,10 @@ async function openCustomer(id) {
   try { records = await api('GET', `/api/customers/${id}/records`); } catch (e) {}
   $('custSheetTitle').textContent = c.name;
   $('custSheetBody').innerHTML = `
-    <div class="muted" style="margin-bottom:10px">${esc(c.phone || 'No phone')}${c.address ? ' · ' + esc(c.address) : ''}</div>
-    <button class="btn btn-primary" id="cInvoice" style="margin-bottom:10px">🧾 New ${esc(state.business.docNoun.toLowerCase())} for ${esc(c.name)}</button>
-    <button class="btn btn-add" id="cMeasure" style="margin-bottom:14px;min-height:46px">📏 Take measurements</button>
-    <div class="subhead">Measurement records</div>
+    <div class="muted" style="margin-bottom:12px">${esc(c.phone || 'No phone')}${c.address ? ' · ' + esc(c.address) : ''}</div>
+    <button class="btn btn-primary" id="cInvoice" style="margin-bottom:8px">New ${esc(state.business.docNoun.toLowerCase())} for ${esc(c.name)}</button>
+    <button class="btn btn-add" id="cMeasure" style="margin-bottom:16px;min-height:44px">Take measurements</button>
+    <div class="subhead" style="margin-top:0">Measurement records</div>
     <div id="cRecords">${records.length ? '' : '<div class="list-empty">No records yet.</div>'}</div>`;
   const recHost = $('cRecords');
   records.forEach(r => {
@@ -1128,10 +1164,10 @@ async function openCustomer(id) {
         <div class="t1">${esc(r.templateName)}</div>
         <div class="t2">${new Date(r.ts).toLocaleDateString('en-GB')} · ${pairs.length} field(s)${r.note ? ' · ' + esc(r.note) : ''}</div>
       </div>
-      <button class="btn btn-quiet" style="min-height:36px;padding:4px 10px;font-size:13px">📤</button>
-      <button class="del">🗑</button>`;
+      <button class="btn btn-ghost" style="min-height:34px;padding:4px 12px;font-size:12.5px">Share</button>
+      <button class="del">✕</button>`;
     el.querySelector('.info').addEventListener('click', () => openRecordEntry(c, r));
-    el.querySelector('.btn-quiet').addEventListener('click', () => shareRecordCard(c, r));
+    el.querySelector('.btn-ghost').addEventListener('click', () => shareRecordCard(c, r));
     el.querySelector('.del').addEventListener('click', async () => {
       if (!confirm('Delete this record?')) return;
       await api('DELETE', '/api/records/' + r.id);
@@ -1159,14 +1195,14 @@ async function refreshTemplates() {
 /* record entry: existing record (view/edit as new) or fresh from template */
 function openRecordEntry(cust, record, latest) {
   const body = $('recSheetBody');
-  $('recSheetTitle').textContent = '📏 ' + cust.name;
+  $('recSheetTitle').textContent = 'Measurements — ' + cust.name;
   const tplOpts = state.templates.map(t =>
     `<option value="${t.id}" ${record && record.templateId === t.id ? 'selected' : ''}>${esc(t.name)}</option>`).join('');
   body.innerHTML = `
     <div class="field"><label>Template</label><select id="recTpl">${tplOpts}</select></div>
     <div id="recFields"></div>
     <div class="field"><label>Note (style, fabric…)</label><input type="text" id="recNote" maxlength="300" value="${esc(record ? record.note : '')}"></div>
-    <button class="btn btn-primary" id="recSave">💾 Save record</button>`;
+    <button class="btn btn-primary" id="recSave">Save record</button>`;
   const drawFields = () => {
     const tpl = state.templates.find(t => t.id === Number($('recTpl').value));
     const source = record ? record.values : (latest && latest.templateId === (tpl && tpl.id) ? latest.values : {});
@@ -1174,12 +1210,12 @@ function openRecordEntry(cust, record, latest) {
     host.innerHTML = '';
     (tpl ? tpl.fields : []).forEach(f => {
       const row = document.createElement('div');
-      row.className = 'catrow'; row.style.gridTemplateColumns = '1fr 110px';
+      row.className = 'catrow'; row.style.gridTemplateColumns = '1fr 108px';
       row.innerHTML = `<label style="align-self:center;margin:0">${esc(f.label)}</label>
         <input type="text" inputmode="decimal" data-k="${esc(f.label)}" value="${esc(source[f.label] || '')}" placeholder="—">`;
       host.appendChild(row);
     });
-    if (!tpl) host.innerHTML = '<div class="list-empty">No templates yet — create one in Settings → Measurement templates.</div>';
+    if (!tpl) host.innerHTML = '<div class="list-empty">No templates yet — create one under Settings → Measurement templates.</div>';
   };
   drawFields();
   $('recTpl').addEventListener('change', drawFields);
@@ -1192,7 +1228,7 @@ function openRecordEntry(cust, record, latest) {
         templateId: tpl ? tpl.id : null, values, note: $('recNote').value
       });
       closeSheet('rec');
-      toast('Measurements saved 📏');
+      toast('Measurements saved');
       openCustomer(cust.id);
     } catch (e) { toast(e.message); }
   });
@@ -1200,7 +1236,7 @@ function openRecordEntry(cust, record, latest) {
 }
 
 async function shareRecordCard(cust, r) {
-  if (typeof html2canvas === 'undefined') { toast('Loading… try again in a second.'); return; }
+  if (typeof html2canvas === 'undefined') { toast('Still loading — try again in a second.'); return; }
   $('mcBiz').textContent = state.business.name;
   $('mcTpl').textContent = r.templateName;
   $('mcWho').textContent = cust.name;
@@ -1247,7 +1283,7 @@ function drawTplList() {
   state.templates.forEach(t => {
     const el = document.createElement('div'); el.className = 'list-item';
     el.innerHTML = `<div class="info"><div class="t1">${esc(t.name)}</div>
-      <div class="t2">${t.fields.map(f => f.label).join(' · ') || 'No fields'}</div></div><button class="del">🗑</button>`;
+      <div class="t2">${t.fields.map(f => f.label).join(' · ') || 'No fields'}</div></div><button class="del">✕</button>`;
     el.querySelector('.info').addEventListener('click', () => editTemplate(t));
     el.querySelector('.del').addEventListener('click', async () => {
       if (!confirm(`Delete template "${t.name}"?`)) return;
@@ -1272,7 +1308,7 @@ $('tplAdd').addEventListener('click', () => editTemplate(null));
 $('setSave').addEventListener('click', async () => {
   try {
     $('setSave').disabled = true;
-    const r = await api('PUT', '/api/business', {
+    await api('PUT', '/api/business', {
       name: $('setName').value, slogan: $('setSlogan').value, theme: state.business.theme,
       contactPhone: $('setPhone').value, socialHandle: $('setSocial').value,
       invoicePrefix: $('setPrefix').value, countryDial: $('setDial').value, footerNote: $('setFooter').value,
@@ -1283,7 +1319,7 @@ $('setSave').addEventListener('click', async () => {
     const me = await api('GET', '/api/me');
     state.business = me.business; state.catalogue = me.catalogue;
     applyBusiness(); render();
-    toast('Settings saved ✅');
+    toast('Settings saved');
   } catch (e) { toast(e.message); }
   finally { $('setSave').disabled = false; }
 });
