@@ -1512,24 +1512,40 @@ function openRecordEntry(cust, record, latest) {
   const body = $('recSheetBody');
   $('recSheetTitle').textContent = 'Measurements — ' + cust.name;
   const tplOpts = state.templates.map(t =>
-    `<option value="${t.id}" ${record && record.templateId === t.id ? 'selected' : ''}>${esc(t.name)}</option>`).join('');
+    `<option value="${t.id}" ${record && record.templateId === t.id ? 'selected' : ''}>${esc(t.name)}</option>`).join('')
+    + '<option value="__new">+ New garment type…</option>';
   body.innerHTML = `
-    <div class="field"><label>Template</label><select id="recTpl">${tplOpts}</select></div>
+    <div class="field"><label>Garment / template</label><select id="recTpl">${tplOpts}</select></div>
     <div id="recFields"></div>
+    <button class="btn btn-add" id="recAddField" style="margin-bottom:12px;min-height:38px">+ Add another measurement</button>
     <div class="field"><label>Note (style, fabric…)</label><input type="text" id="recNote" maxlength="300" value="${esc(record ? record.note : '')}"></div>
     <button class="btn btn-primary" id="recSave">Save record</button>`;
+
+  const host = $('recFields');
+  const addFieldRow = (key, val, custom) => {
+    const row = document.createElement('div');
+    row.className = 'catrow';
+    row.style.gridTemplateColumns = custom ? '1fr 104px 30px' : '1fr 104px';
+    row.innerHTML = custom
+      ? `<input type="text" class="k-in" placeholder="Measurement name" value="${esc(key)}">
+         <input type="text" class="v-in" inputmode="decimal" value="${esc(val)}" placeholder="—">
+         <button type="button" title="Remove">✕</button>`
+      : `<label style="align-self:center;margin:0">${esc(key)}</label>
+         <input type="text" class="v-in" inputmode="decimal" data-k="${esc(key)}" value="${esc(val)}" placeholder="—">`;
+    if (custom) row.querySelector('button').addEventListener('click', () => row.remove());
+    host.appendChild(row);
+    return row;
+  };
+
   const drawFields = () => {
     const tpl = state.templates.find(t => t.id === Number($('recTpl').value));
     const source = record ? record.values : (latest && latest.templateId === (tpl && tpl.id) ? latest.values : {});
-    const host = $('recFields');
     host.innerHTML = '';
-    (tpl ? tpl.fields : []).forEach(f => {
-      const row = document.createElement('div');
-      row.className = 'catrow'; row.style.gridTemplateColumns = '1fr 104px';
-      row.innerHTML = `<label style="align-self:center;margin:0">${esc(f.label)}</label>
-        <input type="text" inputmode="decimal" data-k="${esc(f.label)}" value="${esc(source[f.label] || '')}" placeholder="—">`;
-      host.appendChild(row);
-    });
+    const tplLabels = (tpl ? tpl.fields : []).map(f => f.label);
+    tplLabels.forEach(l => addFieldRow(l, source[l] || '', false));
+    // extra per-client measurements saved on the record but not in the template
+    Object.keys(source).filter(k => !tplLabels.includes(k)).forEach(k => addFieldRow(k, source[k], true));
+    $('recAddField').style.display = tpl ? '' : 'none';
     if (!tpl) {
       host.innerHTML = `<div class="list-empty">No measurement templates yet.<br>A template is the list of fields you measure (e.g. Bust, Waist, Hip).</div>
         <button class="btn btn-add" id="recMakeTpl" style="margin-bottom:12px">Create your first template</button>`;
@@ -1540,11 +1556,28 @@ function openRecordEntry(cust, record, latest) {
     }
   };
   drawFields();
-  $('recTpl').addEventListener('change', drawFields);
+  $('recTpl').addEventListener('change', () => {
+    if ($('recTpl').value === '__new') {
+      const p = editTemplate(null);
+      if (p) p.then(() => openRecordEntry(cust, record, latest));
+      else $('recTpl').selectedIndex = 0;
+      return;
+    }
+    drawFields();
+  });
+  $('recAddField').addEventListener('click', () => {
+    const row = addFieldRow('', '', true);
+    row.querySelector('.k-in').focus();
+  });
   $('recSave').addEventListener('click', async () => {
     const tpl = state.templates.find(t => t.id === Number($('recTpl').value));
     const values = {};
-    $('recFields').querySelectorAll('input').forEach(i => { if (i.value.trim()) values[i.dataset.k] = i.value.trim(); });
+    host.querySelectorAll('.catrow').forEach(row => {
+      const vIn = row.querySelector('.v-in');
+      if (!vIn || !vIn.value.trim()) return;
+      const key = vIn.dataset.k || (row.querySelector('.k-in')?.value || '').trim();
+      if (key) values[key] = vIn.value.trim();
+    });
     try {
       await api('POST', `/api/customers/${cust.id}/records`, {
         templateId: tpl ? tpl.id : null, values, note: $('recNote').value
