@@ -1106,7 +1106,6 @@ function applyBusiness() {
   setCatDraw();
   $('whoami').textContent = state.user.email;
   $('adminLink').classList.toggle('hidden', !state.user.isAdmin);
-  $('tplPanel').classList.toggle('hidden', state.business.category !== 'tailor' && !state.templates.length);
 }
 
 /* ================= invoice editor ================= */
@@ -1428,7 +1427,7 @@ async function refreshCustomers() {
   try { state.customers = await api('GET', '/api/customers?q=' + encodeURIComponent(q)); } catch (e) { toast(e.message); return; }
   $('custList').innerHTML = state.customers.map(c => `<option value="${esc(c.name)}">`).join('');
   const host = $('custListView');
-  if (!state.customers.length) { host.innerHTML = '<div class="list-empty">No customers yet. They are added automatically when you invoice them.</div>'; return; }
+  if (!state.customers.length) { host.innerHTML = '<div class="list-empty">No customers yet. They are added automatically when you invoice them —<br>or use “+ Add customer” to add one now and record their measurements.</div>'; return; }
   host.innerHTML = state.customers.map(c => `
     <div class="list-item" data-id="${c.id}">
       <div class="cust-badge">${esc(initials(c.name))}</div>
@@ -1506,7 +1505,6 @@ async function openCustomer(id) {
 async function refreshTemplates() {
   try { state.templates = await api('GET', '/api/templates'); } catch (e) { state.templates = []; }
   drawTplList();
-  $('tplPanel').classList.toggle('hidden', state.business.category !== 'tailor' && !state.templates.length);
 }
 
 /* record entry: existing record (view/edit as new) or fresh from template */
@@ -1532,7 +1530,14 @@ function openRecordEntry(cust, record, latest) {
         <input type="text" inputmode="decimal" data-k="${esc(f.label)}" value="${esc(source[f.label] || '')}" placeholder="—">`;
       host.appendChild(row);
     });
-    if (!tpl) host.innerHTML = '<div class="list-empty">No templates yet — create one under Settings → Measurement templates.</div>';
+    if (!tpl) {
+      host.innerHTML = `<div class="list-empty">No measurement templates yet.<br>A template is the list of fields you measure (e.g. Bust, Waist, Hip).</div>
+        <button class="btn btn-add" id="recMakeTpl" style="margin-bottom:12px">Create your first template</button>`;
+      $('recMakeTpl').addEventListener('click', () => {
+        const p = editTemplate(null);
+        if (p) p.then(() => openRecordEntry(cust, record, latest));
+      });
+    }
   };
   drawFields();
   $('recTpl').addEventListener('change', drawFields);
@@ -1611,11 +1616,11 @@ function drawTplList() {
   });
 }
 function editTemplate(t) {
-  const name = prompt('Template name:', t ? t.name : '');
-  if (!name || !name.trim()) return;
-  const fields = prompt('Fields, separated by commas:', t ? t.fields.map(f => f.label).join(', ') : 'Bust, Waist, Hip');
-  if (fields == null) return;
-  api('POST', '/api/templates', {
+  const name = prompt('Template name (e.g. "Female — Gown"):', t ? t.name : '');
+  if (!name || !name.trim()) return null;
+  const fields = prompt('Fields to measure, separated by commas:', t ? t.fields.map(f => f.label).join(', ') : 'Bust, Waist, Hip, Shoulder, Sleeve length, Top length');
+  if (fields == null) return null;
+  return api('POST', '/api/templates', {
     id: t ? t.id : undefined, name,
     fields: fields.split(',').map(s => s.trim()).filter(Boolean)
   }).then(refreshTemplates).catch(e => toast(e.message));
