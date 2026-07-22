@@ -115,6 +115,7 @@ CREATE INDEX IF NOT EXISTS idx_rec_cust ON records(business_id, customer_id, cre
 
 /* ---- lightweight migrations for existing databases ---- */
 try { db.exec("ALTER TABLE businesses ADD COLUMN invoice_template TEXT NOT NULL DEFAULT 'classic'"); } catch (e) { /* column exists */ }
+try { db.exec("ALTER TABLE catalogue_items ADD COLUMN unit TEXT NOT NULL DEFAULT ''"); } catch (e) { /* column exists */ }
 
 /* ---- category presets: starter catalogue, modules, record templates ---- */
 const PRESETS = [
@@ -147,7 +148,19 @@ const PRESETS = [
     }
   },
   {
-    slug: 'food', name: 'Food vendor / Caterer', sort: 3,
+    slug: 'fabric', name: 'Fabric & Textiles', sort: 3,
+    preset: {
+      docNoun: 'Invoice', labels: true, measurements: false,
+      catalogue: [
+        { name: 'Ankara', price: 0, unit: 'yd' }, { name: 'Lace', price: 0, unit: 'yd' },
+        { name: 'Senator material', price: 0, unit: 'yd' }, { name: 'Atiku', price: 0, unit: 'yd' },
+        { name: 'Headtie / Gele', price: 0, unit: 'pcs' }
+      ],
+      templates: []
+    }
+  },
+  {
+    slug: 'food', name: 'Food vendor / Caterer', sort: 4,
     preset: {
       docNoun: 'Order', labels: true, measurements: false,
       catalogue: [
@@ -158,7 +171,7 @@ const PRESETS = [
     }
   },
   {
-    slug: 'services', name: 'Services (hair, makeup, lessons…)', sort: 4,
+    slug: 'services', name: 'Services (hair, makeup, lessons…)', sort: 5,
     preset: {
       docNoun: 'Receipt', labels: false, measurements: false,
       catalogue: [{ name: 'Home service', price: 0 }],
@@ -166,13 +179,13 @@ const PRESETS = [
     }
   },
   {
-    slug: 'other', name: 'Other / General', sort: 5,
+    slug: 'other', name: 'Other / General', sort: 6,
     preset: { docNoun: 'Invoice', labels: true, measurements: false, catalogue: [], templates: [] }
   }
 ];
 
 const seedCat = db.prepare(
-  'INSERT INTO categories (slug, name, preset_json, sort) VALUES (?, ?, ?, ?) ON CONFLICT(slug) DO NOTHING'
+  'INSERT INTO categories (slug, name, preset_json, sort) VALUES (?, ?, ?, ?) ON CONFLICT(slug) DO UPDATE SET sort = excluded.sort'
 );
 for (const c of PRESETS) seedCat.run(c.slug, c.name, JSON.stringify(c.preset), c.sort);
 

@@ -51,7 +51,7 @@ app.get('/api/me', (req, res) => {
     user: { email: req.user.email, isAdmin: !!req.user.is_admin },
     business: bizPublic(req.business),
     catalogue: req.business
-      ? db.prepare('SELECT id, name, default_price price FROM catalogue_items WHERE business_id = ? ORDER BY sort, id').all(req.business.id)
+      ? db.prepare('SELECT id, name, default_price price, unit FROM catalogue_items WHERE business_id = ? ORDER BY sort, id').all(req.business.id)
       : []
   });
 });
@@ -89,11 +89,11 @@ app.post('/api/onboard', requireAuth, wrap(async (req, res) => {
         str(b.contactPhone, 30), str(b.socialHandle, 40), prefix,
         JSON.stringify(payments), str(b.footerNote, 200), preset.docNoun || 'Invoice', Date.now());
     const bizId = r.lastInsertRowid;
-    const insItem = db.prepare('INSERT INTO catalogue_items (business_id, name, default_price, sort) VALUES (?, ?, ?, ?)');
+    const insItem = db.prepare('INSERT INTO catalogue_items (business_id, name, default_price, unit, sort) VALUES (?, ?, ?, ?, ?)');
     (Array.isArray(b.catalogue) && b.catalogue.length ? b.catalogue : preset.catalogue)
       .slice(0, 100).forEach((it, i) => {
         const n = str(it.name, 60);
-        if (n) insItem.run(bizId, n, num(it.price), i);
+        if (n) insItem.run(bizId, n, num(it.price), str(it.unit, 10), i);
       });
     const insTpl = db.prepare('INSERT INTO record_templates (business_id, name, fields_json, sort) VALUES (?, ?, ?, ?)');
     (preset.templates || []).forEach((t, i) =>
@@ -129,8 +129,8 @@ app.put('/api/catalogue', requireAuth, requireBusiness, (req, res) => {
   const items = Array.isArray(req.body.items) ? req.body.items.slice(0, 200) : [];
   const tx = db.transaction(() => {
     db.prepare('DELETE FROM catalogue_items WHERE business_id = ?').run(req.business.id);
-    const ins = db.prepare('INSERT INTO catalogue_items (business_id, name, default_price, sort) VALUES (?, ?, ?, ?)');
-    items.forEach((it, i) => { const n = str(it.name, 60); if (n) ins.run(req.business.id, n, num(it.price), i); });
+    const ins = db.prepare('INSERT INTO catalogue_items (business_id, name, default_price, unit, sort) VALUES (?, ?, ?, ?, ?)');
+    items.forEach((it, i) => { const n = str(it.name, 60); if (n) ins.run(req.business.id, n, num(it.price), str(it.unit, 10), i); });
   });
   tx();
   res.json({ ok: true });
@@ -177,8 +177,9 @@ app.get('/api/invoices', requireAuth, requireBusiness, (req, res) => {
 app.post('/api/invoices', requireAuth, requireBusiness, (req, res) => {
   const b = req.body || {};
   const items = (Array.isArray(b.items) ? b.items : []).slice(0, 100).map(i => ({
-    name: str(i.name, 80) || 'Item', qty: Math.max(1, Math.round(num(i.qty)) || 1), price: num(i.price)
-  })).map(i => ({ ...i, amount: i.qty * i.price }));
+    name: str(i.name, 80) || 'Item', unit: str(i.unit, 10),
+    qty: Math.max(0.01, Math.round((num(i.qty) || 1) * 100) / 100), price: num(i.price)
+  })).map(i => ({ ...i, amount: Math.round(i.qty * i.price * 100) / 100 }));
   if (!items.length) throw httpErr(400, 'Add at least one item');
   const delivery = num(b.delivery), discount = num(b.discount);
   const subtotal = items.reduce((s, i) => s + i.amount, 0);

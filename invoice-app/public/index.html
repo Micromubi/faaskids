@@ -757,6 +757,7 @@ const THEME_COLORS = { indigo:'#4f5df0', teal:'#0f9490', emerald:'#189065', ambe
 const CAT_META = {
   seller:  { d: 'Clothes, thrift, skincare and more' },
   tailor:  { d: 'Sewing, styles and client measurements' },
+  fabric:  { d: 'Ankara, lace & materials sold per yard' },
   food:    { d: 'Meals, trays and catering orders' },
   services:{ d: 'Hair, makeup, lessons, home service' },
   other:   { d: 'Everything else' }
@@ -857,10 +858,13 @@ function drawObCat() {
   const host = $('obCat'); host.innerHTML = '';
   ob.catalogue.forEach((it, i) => {
     const row = document.createElement('div'); row.className = 'catrow';
+    row.style.gridTemplateColumns = '1fr 62px 96px 30px';
     row.innerHTML = `<input type="text" placeholder="Item name" value="${esc(it.name)}">
+      <input type="text" placeholder="Unit" maxlength="10" value="${esc(it.unit || '')}" title="e.g. yd, kg, pcs — leave empty for plain quantity">
       <input type="number" placeholder="Price" min="0" value="${it.price || ''}"><button type="button">✕</button>`;
-    const [nameI, priceI] = row.querySelectorAll('input');
+    const [nameI, unitI, priceI] = row.querySelectorAll('input');
     nameI.addEventListener('input', () => it.name = nameI.value);
+    unitI.addEventListener('input', () => it.unit = unitI.value.trim());
     priceI.addEventListener('input', () => it.price = Number(priceI.value) || 0);
     row.querySelector('button').addEventListener('click', () => { ob.catalogue.splice(i, 1); drawObCat(); });
     host.appendChild(row);
@@ -1124,11 +1128,12 @@ function addItemRow(focus = true, data = null) {
     <label>Item</label>
     <select class="i-type">${opts}<option>Other…</option></select>
     <div class="custom-name"><input type="text" class="i-custom" placeholder="Type item name"></div>
-    <div class="qty-price">
+    <div class="qty-price" style="grid-template-columns:112px 58px 1fr">
       <div><label>Qty</label>
         <div class="qty"><button type="button" class="q-minus">−</button>
-        <input type="number" class="i-qty" value="1" min="1" inputmode="numeric">
+        <input type="number" class="i-qty" value="1" min="0" step="any" inputmode="decimal">
         <button type="button" class="q-plus">+</button></div></div>
+      <div><label>Unit</label><input type="text" class="i-unit" maxlength="10" placeholder="pcs"></div>
       <div><label>Price each</label>
         <div class="naira-input"><span>${CUR[state.business.currency] || ''}</span>
         <input type="number" class="i-price" min="0" placeholder="0" inputmode="numeric"></div></div>
@@ -1136,17 +1141,23 @@ function addItemRow(focus = true, data = null) {
     <div class="chips">${quickPrices().map(p => `<button type="button" class="chip" data-price="${p}">${fmt(p)}</button>`).join('')}</div>`;
   const sel = card.querySelector('.i-type'), customWrap = card.querySelector('.custom-name');
   const priceInput = card.querySelector('.i-price'), qtyInput = card.querySelector('.i-qty');
+  const unitInput = card.querySelector('.i-unit');
 
   const syncCustom = () => customWrap.classList.toggle('show', sel.value === 'Other…');
+  const syncUnit = () => {
+    const known = state.catalogue.find(c => c.name === sel.value);
+    unitInput.value = known ? (known.unit || '') : unitInput.value;
+  };
   sel.addEventListener('change', () => {
     syncCustom();
     const known = state.catalogue.find(c => c.name === sel.value);
     if (known && known.price > 0 && !priceInput.value) priceInput.value = known.price;
+    syncUnit();
     render();
   });
   card.querySelector('.remove').addEventListener('click', () => { card.remove(); render(); });
-  card.querySelector('.q-minus').addEventListener('click', () => { qtyInput.value = Math.max(1, (parseInt(qtyInput.value) || 1) - 1); render(); });
-  card.querySelector('.q-plus').addEventListener('click', () => { qtyInput.value = (parseInt(qtyInput.value) || 0) + 1; render(); });
+  card.querySelector('.q-minus').addEventListener('click', () => { qtyInput.value = Math.max(1, (parseFloat(qtyInput.value) || 1) - 1); render(); });
+  card.querySelector('.q-plus').addEventListener('click', () => { qtyInput.value = (parseFloat(qtyInput.value) || 0) + 1; render(); });
   card.querySelectorAll('.chip').forEach(chip => chip.addEventListener('click', () => {
     priceInput.value = chip.dataset.price;
     card.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
@@ -1164,7 +1175,11 @@ function addItemRow(focus = true, data = null) {
     else { sel.value = 'Other…'; card.querySelector('.i-custom').value = data.name; }
     syncCustom();
     qtyInput.value = data.qty; priceInput.value = data.price || '';
-  } else if (!state.catalogue.length) { sel.value = 'Other…'; syncCustom(); }
+    unitInput.value = data.unit || '';
+  } else {
+    if (!state.catalogue.length) { sel.value = 'Other…'; syncCustom(); }
+    syncUnit();
+  }
 
   itemsEl.appendChild(card);
   if (focus) sel.focus();
@@ -1176,9 +1191,10 @@ function getItems() {
     const type = card.querySelector('.i-type').value;
     const custom = card.querySelector('.i-custom').value.trim();
     const name = type === 'Other…' ? (custom || 'Item') : type;
-    const qty = Math.max(1, parseInt(card.querySelector('.i-qty').value) || 1);
+    const qty = Math.max(0.01, Math.round((parseFloat(card.querySelector('.i-qty').value) || 1) * 100) / 100);
+    const unit = card.querySelector('.i-unit').value.trim();
     const price = Math.max(0, parseFloat(card.querySelector('.i-price').value) || 0);
-    return { name, qty, price, amount: qty * price };
+    return { name, qty, unit, price, amount: Math.round(qty * price * 100) / 100 };
   }).filter(i => i.price > 0 || i.name !== 'Item');
 }
 
@@ -1198,7 +1214,7 @@ function render() {
   $('invCust').textContent = $('custName').value.trim() || '—';
   $('invPhone').textContent = $('custPhone').value.trim();
   $('invRows').innerHTML = items.length
-    ? items.map(i => `<tr><td>${esc(i.name)}</td><td class="ctr">${i.qty}</td>
+    ? items.map(i => `<tr><td>${esc(i.name)}</td><td class="ctr">${i.qty}${i.unit ? ' ' + esc(i.unit) : ''}</td>
         <td class="num">${fmt(i.price)}</td><td class="num">${fmt(i.amount)}</td></tr>`).join('')
     : '<tr><td colspan="4"><div class="empty-hint">Add items to build the ' + esc(state.business.docNoun.toLowerCase()) + '.</div></td></tr>';
   let t = `<tr><td>Subtotal</td><td class="num">${fmt(subtotal)}</td></tr>`;
@@ -1316,7 +1332,7 @@ $('labelBtn').addEventListener('click', () => withBusy($('labelBtn'), 'Label', a
   const list = $('lblItems');
   list.className = 'lbl-items' + (items.length > 5 ? ' cols2' : '') + (items.length > 12 ? ' sz-s' : items.length > 5 ? ' sz-m' : '');
   list.innerHTML = items.length
-    ? items.map(i => `<div class="lbl-item"><span class="n">${esc(i.name)}</span><span class="q">×${i.qty}</span></div>`).join('')
+    ? items.map(i => `<div class="lbl-item"><span class="n">${esc(i.name)}</span><span class="q">×${i.qty}${i.unit ? ' ' + esc(i.unit) : ''}</span></div>`).join('')
     : '<div class="lbl-item blank"></div><div class="lbl-item blank"></div><div class="lbl-item blank"></div>';
   const canvas = await capture($('label'), 2);
   const blob = await new Promise(res => canvas.toBlob(res, 'image/png'));
@@ -1331,7 +1347,7 @@ $('waBtn').addEventListener('click', async () => {
   let msg = `*${b.name} — ${b.docNoun} ${draft.number}*\n`;
   if (name) msg += `Customer: ${name}\n`;
   msg += `Date: ${new Date().toLocaleDateString('en-NG')}\n\n`;
-  items.forEach(i => { msg += `• ${i.name} x${i.qty} @ ${fmt(i.price)} = ${fmt(i.amount)}\n`; });
+  items.forEach(i => { msg += `• ${i.name} x${i.qty}${i.unit ? ' ' + i.unit : ''} @ ${fmt(i.price)} = ${fmt(i.amount)}\n`; });
   msg += `\nSubtotal: ${fmt(subtotal)}`;
   if (delivery) msg += `\nDelivery: ${fmt(delivery)}`;
   if (discount) msg += `\nDiscount: −${fmt(discount)}`;
@@ -1615,17 +1631,20 @@ function closeSheet(which) { $(which + 'Overlay').classList.remove('open'); $(wh
 /* ================= settings ================= */
 let setCatalogue = [];
 function setCatDraw() {
-  setCatalogue = state.catalogue.map(c => ({ name: c.name, price: c.price }));
+  setCatalogue = state.catalogue.map(c => ({ name: c.name, price: c.price, unit: c.unit || '' }));
   drawSetCat();
 }
 function drawSetCat() {
   const host = $('setCat'); host.innerHTML = '';
   setCatalogue.forEach((it, i) => {
     const row = document.createElement('div'); row.className = 'catrow';
+    row.style.gridTemplateColumns = '1fr 62px 96px 30px';
     row.innerHTML = `<input type="text" value="${esc(it.name)}" placeholder="Item name">
+      <input type="text" value="${esc(it.unit || '')}" maxlength="10" placeholder="Unit" title="e.g. yd, kg, pcs — leave empty for plain quantity">
       <input type="number" value="${it.price || ''}" min="0" placeholder="Price"><button type="button">✕</button>`;
-    const [nameI, priceI] = row.querySelectorAll('input');
+    const [nameI, unitI, priceI] = row.querySelectorAll('input');
     nameI.addEventListener('input', () => it.name = nameI.value);
+    unitI.addEventListener('input', () => it.unit = unitI.value.trim());
     priceI.addEventListener('input', () => it.price = Number(priceI.value) || 0);
     row.querySelector('button').addEventListener('click', () => { setCatalogue.splice(i, 1); drawSetCat(); });
     host.appendChild(row);
