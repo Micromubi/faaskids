@@ -122,7 +122,7 @@ const PRESETS = [
   {
     slug: 'seller', name: 'Seller / Retail', sort: 1,
     preset: {
-      docNoun: 'Invoice', labels: true, measurements: false,
+      docNoun: 'Invoice', labels: true, measurements: false, invoiceTemplate: 'classic',
       catalogue: [
         { name: 'Dress', price: 0 }, { name: 'Shoes', price: 0 },
         { name: 'Bag', price: 0 }, { name: 'Accessories', price: 0 }
@@ -133,7 +133,7 @@ const PRESETS = [
   {
     slug: 'tailor', name: 'Tailor / Fashion designer', sort: 2,
     preset: {
-      docNoun: 'Invoice', labels: true, measurements: true,
+      docNoun: 'Invoice', labels: true, measurements: true, invoiceTemplate: 'classic',
       catalogue: [
         { name: 'Native wear (sewing)', price: 0 }, { name: 'Gown (sewing)', price: 0 },
         { name: 'Senator / Kaftan (sewing)', price: 0 }, { name: 'Alteration', price: 0 },
@@ -150,7 +150,7 @@ const PRESETS = [
   {
     slug: 'fabric', name: 'Fabric & Textiles', sort: 3,
     preset: {
-      docNoun: 'Invoice', labels: true, measurements: false,
+      docNoun: 'Invoice', labels: true, measurements: false, invoiceTemplate: 'modern',
       catalogue: [
         { name: 'Ankara', price: 0, unit: 'yd' }, { name: 'Lace', price: 0, unit: 'yd' },
         { name: 'Senator material', price: 0, unit: 'yd' }, { name: 'Atiku', price: 0, unit: 'yd' },
@@ -162,7 +162,7 @@ const PRESETS = [
   {
     slug: 'cakes', name: 'Cakes & Baking', sort: 4,
     preset: {
-      docNoun: 'Invoice', labels: true, measurements: true,
+      docNoun: 'Invoice', labels: true, measurements: true, invoiceTemplate: 'minimal',
       catalogue: [
         { name: 'Cake — 8 inch', price: 0, unit: 'pcs' }, { name: 'Cake — 10 inch', price: 0, unit: 'pcs' },
         { name: 'Cupcakes', price: 0, unit: 'dozen' }, { name: 'Small chops', price: 0, unit: 'pack' },
@@ -176,7 +176,7 @@ const PRESETS = [
   {
     slug: 'food', name: 'Food vendor / Caterer', sort: 5,
     preset: {
-      docNoun: 'Order', labels: true, measurements: false,
+      docNoun: 'Order', labels: true, measurements: false, invoiceTemplate: 'modern',
       catalogue: [
         { name: 'Small tray', price: 0 }, { name: 'Medium tray', price: 0 },
         { name: 'Large tray', price: 0 }, { name: 'Drinks', price: 0 }
@@ -187,7 +187,7 @@ const PRESETS = [
   {
     slug: 'electronics', name: 'Electronics & Gadgets', sort: 6,
     preset: {
-      docNoun: 'Invoice', labels: true, measurements: false,
+      docNoun: 'Invoice', labels: true, measurements: false, invoiceTemplate: 'technical',
       footerNote: '7-day return policy · Warranty as stated per item',
       catalogue: [
         { name: 'Phone', price: 0, unit: 'pcs' }, { name: 'Laptop', price: 0, unit: 'pcs' },
@@ -200,14 +200,14 @@ const PRESETS = [
   {
     slug: 'services', name: 'Services (hair, makeup, lessons…)', sort: 7,
     preset: {
-      docNoun: 'Receipt', labels: false, measurements: false,
+      docNoun: 'Receipt', labels: false, measurements: false, invoiceTemplate: 'minimal',
       catalogue: [{ name: 'Home service', price: 0 }],
       templates: []
     }
   },
   {
     slug: 'other', name: 'Other / General', sort: 8,
-    preset: { docNoun: 'Invoice', labels: true, measurements: false, catalogue: [], templates: [] }
+    preset: { docNoun: 'Invoice', invoiceTemplate: 'classic', labels: true, measurements: false, catalogue: [], templates: [] }
   }
 ];
 
@@ -215,5 +215,21 @@ const seedCat = db.prepare(
   'INSERT INTO categories (slug, name, preset_json, sort) VALUES (?, ?, ?, ?) ON CONFLICT(slug) DO UPDATE SET sort = excluded.sort'
 );
 for (const c of PRESETS) seedCat.run(c.slug, c.name, JSON.stringify(c.preset), c.sort);
+
+/* backfill default invoice design into category rows seeded before it existed,
+   without overwriting any other preset customisations */
+const getCat = db.prepare('SELECT preset_json FROM categories WHERE slug = ?');
+const updCat = db.prepare('UPDATE categories SET preset_json = ? WHERE slug = ?');
+for (const c of PRESETS) {
+  const row = getCat.get(c.slug);
+  if (!row || !c.preset.invoiceTemplate) continue;
+  try {
+    const p = JSON.parse(row.preset_json);
+    if (!p.invoiceTemplate) {
+      p.invoiceTemplate = c.preset.invoiceTemplate;
+      updCat.run(JSON.stringify(p), c.slug);
+    }
+  } catch (e) { /* leave malformed rows alone */ }
+}
 
 module.exports = db;

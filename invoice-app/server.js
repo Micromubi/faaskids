@@ -79,15 +79,19 @@ app.post('/api/onboard', requireAuth, wrap(async (req, res) => {
   }
   const prefix = (str(b.invoicePrefix, 6).toUpperCase().replace(/[^A-Z0-9]/g, '') ||
     name.replace(/[^A-Za-z]/g, '').slice(0, 3).toUpperCase() || 'INV');
+  const CATEGORY_DEFAULT_TPL = { fabric: 'modern', cakes: 'minimal', food: 'modern', electronics: 'technical', services: 'minimal' };
+  const tplChoice = INVOICE_TEMPLATES.includes(b.invoiceTemplate) ? b.invoiceTemplate
+    : (INVOICE_TEMPLATES.includes(preset.invoiceTemplate) ? preset.invoiceTemplate
+      : (CATEGORY_DEFAULT_TPL[cat.slug] || 'classic'));
 
   const tx = db.transaction(() => {
     const r = db.prepare(`INSERT INTO businesses
       (owner_user_id, name, slogan, category, theme, contact_phone, social_handle,
-       invoice_prefix, payment_json, footer_note, doc_noun, created_at)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
+       invoice_prefix, payment_json, footer_note, doc_noun, invoice_template, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
       .run(req.user.id, name, str(b.slogan, 80), cat.slug, str(b.theme, 20) || 'rose',
         str(b.contactPhone, 30), str(b.socialHandle, 40), prefix,
-        JSON.stringify(payments), str(b.footerNote, 200) || str(preset.footerNote || '', 200), preset.docNoun || 'Invoice', Date.now());
+        JSON.stringify(payments), str(b.footerNote, 200) || str(preset.footerNote || '', 200), preset.docNoun || 'Invoice', tplChoice, Date.now());
     const bizId = r.lastInsertRowid;
     const insItem = db.prepare('INSERT INTO catalogue_items (business_id, name, default_price, unit, sort) VALUES (?, ?, ?, ?, ?)');
     (Array.isArray(b.catalogue) && b.catalogue.length ? b.catalogue : preset.catalogue)

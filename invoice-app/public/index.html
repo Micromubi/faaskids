@@ -500,6 +500,7 @@
         <div class="field"><label>Social handle</label><input type="text" id="obSocial" placeholder="@yourbrand"></div>
       </div>
       <div class="field"><label>Accent colour</label><div class="theme-chips" id="obThemes"></div></div>
+      <div class="field"><label>Invoice design</label><div class="tpl-grid" id="obTpl"></div></div>
       <button class="btn btn-primary" id="obNext2" style="margin-top:6px">Continue</button>
       <button class="btn btn-ghost" id="obBack2" style="width:100%;margin-top:10px">Back</button>
     </div>
@@ -833,7 +834,7 @@ $('authCode').addEventListener('keydown', e => { if (e.key === 'Enter') $('authV
 $('authEmail').addEventListener('keydown', e => { if (e.key === 'Enter') $('authSend').click(); });
 
 /* ================= onboarding ================= */
-const ob = { category: null, theme: 'indigo', catalogue: [] };
+const ob = { category: null, theme: 'indigo', template: 'classic', catalogue: [] };
 let obInited = false;
 
 function initOnboarding() {
@@ -873,8 +874,22 @@ function drawObCat() {
     host.appendChild(row);
   });
 }
+function drawObTpl() {
+  const host = $('obTpl');
+  host.innerHTML = '';
+  DOC_TPLS.forEach(t => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'tpl-pick' + (ob.template === t ? ' active' : '');
+    b.innerHTML = tplThumb(t) + `<div class="nm2">${TPL_META[t][0]}</div><div class="d2">${TPL_META[t][1]}</div>`;
+    b.addEventListener('click', () => { ob.template = t; drawObTpl(); });
+    host.appendChild(b);
+  });
+}
 $('obNext1').addEventListener('click', () => {
   ob.catalogue = (ob.category.preset.catalogue || []).map(c => ({ ...c }));
+  ob.template = DOC_TPLS.includes(ob.category.preset.invoiceTemplate) ? ob.category.preset.invoiceTemplate : 'classic';
+  drawObTpl();
   obStep(2);
 });
 $('obBack2').addEventListener('click', () => obStep(1));
@@ -890,6 +905,7 @@ $('obFinish').addEventListener('click', async () => {
     await api('POST', '/api/onboard', {
       category: ob.category.slug, name: $('obName').value, slogan: $('obSlogan').value,
       contactPhone: $('obPhone').value, socialHandle: $('obSocial').value, theme: ob.theme,
+      invoiceTemplate: ob.template,
       accountName: $('obAcctName').value, bank: $('obBank').value, accountNumber: $('obAcctNo').value,
       invoicePrefix: $('obPrefix').value, catalogue: ob.catalogue
     });
