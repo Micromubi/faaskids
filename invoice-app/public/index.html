@@ -174,6 +174,116 @@
     justify-content: space-between; gap: 12px; font-size: 11px; color: var(--ink-3); }
   .doc-foot .main { color: var(--ink-2); font-weight: 500; }
 
+  /* ===== template: MINIMAL — monochrome, airy, hairlines, centered brand ===== */
+  .tpl-minimal .doc-inner { padding: 40px 40px 32px; }
+  .tpl-minimal { color: #1d1d1f; }
+  .tpl-minimal .m-head { text-align: center; margin-bottom: 26px; }
+  .tpl-minimal .m-head .n { font-family: var(--disp); font-weight: 700; font-size: 21px; letter-spacing: -.01em; }
+  .tpl-minimal .m-head .s { font-size: 12px; color: #86868b; margin-top: 2px; }
+  .tpl-minimal .m-head .c { font-size: 11.5px; color: #86868b; margin-top: 2px; }
+  .tpl-minimal .hair { border: none; border-top: 1px solid #e8e8ed; margin: 0 0 18px; }
+  .tpl-minimal .m-meta { display: flex; justify-content: space-between; font-size: 12.5px; color: #515154; margin-bottom: 22px; }
+  .tpl-minimal .m-meta b { color: #1d1d1f; font-weight: 600; font-family: var(--disp); }
+  .tpl-minimal .lbl { font-size: 10px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: #86868b; }
+  .tpl-minimal .m-to { margin-bottom: 8px; }
+  .tpl-minimal .m-to .who { font-size: 15px; font-weight: 600; margin-top: 3px; }
+  .tpl-minimal .m-to .ph { font-size: 12px; color: #86868b; }
+  .tpl-minimal .doc-table { margin-top: 14px; }
+  .tpl-minimal .doc-table th { border-bottom: 1px solid #e8e8ed; color: #86868b; font-weight: 600; letter-spacing: .08em; }
+  .tpl-minimal .doc-table td { border-bottom: 1px solid #f0f0f2; font-size: 13px; padding: 12px 8px; }
+  .tpl-minimal .doc-totals { margin-top: 8px; }
+  .tpl-minimal .doc-totals td { color: #515154; }
+  .tpl-minimal .doc-totals td.num { color: #1d1d1f; }
+  .tpl-minimal .doc-totals .grand td { background: none; border-top: 1px solid #1d1d1f; color: #1d1d1f;
+    font-weight: 700; font-size: 15.5px; padding-top: 12px; border-radius: 0; }
+  .tpl-minimal .m-pay { margin-top: 24px; padding-top: 14px; border-top: 1px solid #e8e8ed; }
+  .tpl-minimal .m-pay .row { font-size: 12.5px; display: flex; justify-content: space-between; padding: 2px 0; color: #515154; }
+  .tpl-minimal .m-pay .row b { color: #1d1d1f; font-weight: 600; font-family: var(--disp); }
+  .tpl-minimal .m-note { margin-top: 14px; font-size: 12.5px; color: #515154; white-space: pre-line; }
+  .tpl-minimal .m-foot { margin-top: 34px; text-align: center; font-size: 11px; color: #86868b; }
+  .tpl-minimal .m-foot .main { display: block; color: #515154; font-weight: 500; font-size: 12px; margin-bottom: 2px; }
+
+  /* ===== template: MODERN — summary-first, amount-due card, soft gray bands ===== */
+  .tpl-modern .doc-inner { padding: 30px 30px 26px; }
+  .tpl-modern .g-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; margin-bottom: 6px; }
+  .tpl-modern .g-head .n { font-family: var(--disp); font-weight: 700; font-size: 20px; }
+  .tpl-modern .g-head .s { font-size: 12px; color: var(--ink-2); }
+  .tpl-modern .g-head .c { font-size: 11.5px; color: var(--ink-3); margin-top: 2px; }
+  .tpl-modern .g-title { text-align: right; }
+  .tpl-modern .g-title .t { font-size: 26px; font-weight: 400; color: var(--ink-2); letter-spacing: -.01em; }
+  .tpl-modern .g-meta { display: grid; grid-template-columns: repeat(3, auto); gap: 6px 28px; margin: 14px 0 18px;
+    padding: 12px 0; border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); width: fit-content; }
+  .tpl-modern .g-meta .l { font-size: 10.5px; color: var(--ink-3); }
+  .tpl-modern .g-meta .v2 { font-size: 12.5px; font-weight: 600; font-family: var(--disp); }
+  .tpl-modern .g-due { background: var(--accent-soft); border-radius: 10px; padding: 16px 20px; margin-bottom: 18px;
+    display: flex; justify-content: space-between; align-items: center; gap: 14px; flex-wrap: wrap; }
+  .tpl-modern .g-due .l { font-size: 11.5px; font-weight: 600; color: var(--accent-text); }
+  .tpl-modern .g-due .big { font-family: var(--disp); font-size: 26px; font-weight: 700; color: var(--accent-text); }
+  .tpl-modern .g-due .who-wrap { text-align: right; }
+  .tpl-modern .g-due .who { font-weight: 600; font-size: 13.5px; }
+  .tpl-modern .g-due .ph { font-size: 11.5px; color: var(--ink-2); }
+  .tpl-modern .doc-table th { background: #f1f3f4; color: var(--ink-2); border-bottom: none; padding: 9px 10px;
+    font-weight: 600; letter-spacing: .06em; }
+  .tpl-modern .doc-table th:first-child { border-radius: 8px 0 0 8px; }
+  .tpl-modern .doc-table th:last-child { border-radius: 0 8px 8px 0; }
+  .tpl-modern .doc-table td { padding: 11px 10px; }
+  .tpl-modern .doc-totals .grand td { background: none; border-top: 2px solid var(--ink); color: var(--ink);
+    border-radius: 0; font-size: 15px; }
+  .tpl-modern .g-pay { margin-top: 18px; background: #f8f9fa; border-radius: 10px; padding: 13px 16px; }
+  .tpl-modern .g-pay .l { font-size: 10.5px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); margin-bottom: 5px; }
+  .tpl-modern .g-pay .row { font-size: 12.5px; display: flex; justify-content: space-between; padding: 2px 0; color: var(--ink-2); }
+  .tpl-modern .g-pay .row b { color: var(--ink); font-weight: 600; font-family: var(--disp); }
+  .tpl-modern .g-note { margin-top: 12px; font-size: 12.5px; color: var(--ink-2); white-space: pre-line; }
+  .tpl-modern .g-foot { margin-top: 24px; font-size: 11px; color: var(--ink-3); }
+  .tpl-modern .g-foot .main { color: var(--ink-2); font-weight: 500; }
+
+  /* ===== template: TECHNICAL — black band, tracked uppercase, sharp rules ===== */
+  .tpl-technical { border-radius: 0; }
+  .tpl-technical .t-band { background: #0b0b0c; color: #fff; padding: 22px 28px; display: flex;
+    justify-content: space-between; align-items: baseline; gap: 16px; }
+  .tpl-technical .t-band .n { font-family: var(--disp); font-weight: 700; font-size: 19px; letter-spacing: .28em;
+    text-transform: uppercase; white-space: nowrap; overflow: hidden; }
+  .tpl-technical .t-band .no-wrap { text-align: right; flex: 0 0 auto; }
+  .tpl-technical .t-band .t { font-size: 10px; letter-spacing: .3em; text-transform: uppercase; color: #9b9ba1; }
+  .tpl-technical .t-band .no { font-family: var(--disp); font-weight: 600; font-size: 14px; margin-top: 2px; }
+  .tpl-technical .doc-inner { padding: 22px 28px 24px; }
+  .tpl-technical .t-meta { display: flex; justify-content: space-between; gap: 14px; padding-bottom: 14px;
+    border-bottom: 2px solid #0b0b0c; margin-bottom: 16px; flex-wrap: wrap; }
+  .tpl-technical .t-meta .cell .l { font-size: 9px; letter-spacing: .22em; text-transform: uppercase; color: #85858c; font-weight: 600; }
+  .tpl-technical .t-meta .cell .v2 { font-size: 12.5px; font-weight: 600; margin-top: 2px; font-family: var(--disp); }
+  .tpl-technical .lbl { font-size: 9px; letter-spacing: .22em; text-transform: uppercase; color: #85858c; font-weight: 600; }
+  .tpl-technical .t-to .who { font-size: 15px; font-weight: 700; margin-top: 3px; text-transform: uppercase; letter-spacing: .04em; }
+  .tpl-technical .t-to .ph { font-size: 12px; color: #55555c; font-family: var(--disp); }
+  .tpl-technical .doc-table { margin-top: 16px; }
+  .tpl-technical .doc-table th { color: #0b0b0c; border-bottom: 2px solid #0b0b0c; letter-spacing: .2em; font-weight: 700; }
+  .tpl-technical .doc-table td { border-bottom: 1px solid #d9d9de; font-size: 12.5px; }
+  .tpl-technical .doc-table td:first-child { font-weight: 600; }
+  .tpl-technical .doc-totals { margin-top: 10px; }
+  .tpl-technical .doc-totals table { border: 2px solid #0b0b0c; }
+  .tpl-technical .doc-totals td { padding: 7px 12px; font-size: 12.5px; }
+  .tpl-technical .doc-totals .grand td { background: #0b0b0c; color: #fff; border-radius: 0; font-size: 14px;
+    letter-spacing: .04em; text-transform: uppercase; }
+  .tpl-technical .doc-totals .grand td.num { color: #fff; }
+  .tpl-technical .t-pay { margin-top: 18px; border: 1px solid #0b0b0c; padding: 12px 14px; }
+  .tpl-technical .t-pay .row { font-size: 12.5px; display: flex; justify-content: space-between; padding: 2px 0; color: #3a3a40; }
+  .tpl-technical .t-pay .row b { color: #0b0b0c; font-weight: 700; font-family: var(--disp); }
+  .tpl-technical .t-note { margin-top: 12px; font-size: 12.5px; color: #3a3a40; white-space: pre-line; }
+  .tpl-technical .t-foot { margin-top: 22px; background: #0b0b0c; color: #9b9ba1; padding: 9px 14px; font-size: 10px;
+    letter-spacing: .12em; text-transform: uppercase; display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+  .tpl-technical .t-foot .main { color: #fff; }
+
+  /* template picker (settings) */
+  .tpl-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  @media (max-width: 980px) { .tpl-grid { grid-template-columns: repeat(2, 1fr); } }
+  .tpl-pick { border: 1px solid var(--line-2); border-radius: 10px; background: var(--card); cursor: pointer;
+    padding: 10px; text-align: center; font-family: inherit; }
+  .tpl-pick.active { border-color: var(--accent); background: var(--accent-soft); }
+  .tpl-pick .thumb { height: 54px; border: 1px solid var(--line); border-radius: 6px; margin-bottom: 7px;
+    background: #fff; position: relative; overflow: hidden; }
+  .tpl-pick .thumb i { position: absolute; display: block; }
+  .tpl-pick .nm2 { font-weight: 600; font-size: 12px; }
+  .tpl-pick .d2 { font-size: 10.5px; color: var(--ink-3); margin-top: 1px; }
+
   /* ======================= 8x8cm label (offscreen, thermal b/w) ======================= */
   .label { position: fixed; left: -10000px; top: 0; width: 640px; height: 640px; background: #fff; color: #000;
     font-family: 'Inter', sans-serif; display: flex; flex-direction: column; padding: 22px; }
@@ -488,45 +598,7 @@
               <button class="btn b-lbl" id="labelBtn">Label</button>
               <button class="btn b-wa" id="waBtn">WhatsApp</button>
             </div>
-            <div class="doc" id="invoice">
-              <div class="doc-band"></div>
-              <div class="doc-inner">
-                <div class="doc-top">
-                  <div class="doc-brand">
-                    <div class="n" id="invBizName">—</div>
-                    <div class="s" id="invBizSlogan"></div>
-                    <div class="c" id="invBizContact"></div>
-                  </div>
-                  <div class="doc-meta">
-                    <div class="t" id="invTitle">Invoice</div>
-                    <div class="no" id="invNo">—</div>
-                    <div class="d" id="invDate"></div>
-                  </div>
-                </div>
-                <div class="doc-to">
-                  <div class="l">Billed to</div>
-                  <div class="who" id="invCust">—</div>
-                  <div class="ph" id="invPhone"></div>
-                </div>
-                <table class="doc-table">
-                  <thead><tr><th>Item</th><th class="ctr">Qty</th><th class="num">Price</th><th class="num">Amount</th></tr></thead>
-                  <tbody id="invRows"></tbody>
-                </table>
-                <div class="doc-bottom">
-                  <div class="doc-side">
-                    <div class="doc-pay" id="invPayBox" style="display:none">
-                      <div class="l">Payment details</div>
-                      <div id="invPayRows"></div>
-                    </div>
-                    <div class="doc-note" id="invNotesBox" style="display:none">
-                      <div class="l">Note</div><div id="invNotes"></div>
-                    </div>
-                  </div>
-                  <div class="doc-totals"><table><tbody id="invTotals"></tbody></table></div>
-                </div>
-                <div class="doc-foot"><div class="main" id="invFootMain"></div><div id="invFootSub"></div></div>
-              </div>
-            </div>
+            <div class="doc tpl-classic" id="invoice"></div>
           </section>
         </div>
       </div>
@@ -571,6 +643,7 @@
             </div>
             <div class="field"><label>Invoice footer line</label><input type="text" id="setFooter" maxlength="200" placeholder="e.g. Call or DM to order · Nationwide delivery"></div>
             <div class="field"><label>Accent colour</label><div class="theme-chips" id="setThemes"></div></div>
+            <div class="field"><label>Invoice design</label><div class="tpl-grid" id="tplPicker"></div></div>
           </div>
           <div>
             <div class="card">
@@ -820,14 +893,155 @@ $('obFinish').addEventListener('click', async () => {
 });
 obStep(1);
 
-/* ================= business → UI ================= */
-function applyBusiness() {
+/* ================= invoice document templates =================
+   Four arrangements of the same data. Every shell must contain the
+   full id set that fillDocBusiness() and render() write into. */
+const DOC_TPLS = ['classic', 'minimal', 'modern', 'technical'];
+const TPL_META = {
+  classic:   ['Classic', 'Accent band'],
+  minimal:   ['Minimal', 'Clean & airy'],
+  modern:    ['Modern', 'Amount-due card'],
+  technical: ['Technical', 'Bold industrial']
+};
+const DOC_TABLE = `<table class="doc-table">
+  <thead><tr><th>Item</th><th class="ctr">Qty</th><th class="num">Price</th><th class="num">Amount</th></tr></thead>
+  <tbody id="invRows"></tbody></table>`;
+const DOC_SHELLS = {
+  classic: `
+    <div class="doc-band"></div>
+    <div class="doc-inner">
+      <div class="doc-top">
+        <div class="doc-brand">
+          <div class="n" id="invBizName">—</div>
+          <div class="s" id="invBizSlogan"></div>
+          <div class="c" id="invBizContact"></div>
+        </div>
+        <div class="doc-meta">
+          <div class="t" id="invTitle">Invoice</div>
+          <div class="no" id="invNo">—</div>
+          <div class="d" id="invDate"></div>
+        </div>
+      </div>
+      <div class="doc-to">
+        <div class="l">Billed to</div>
+        <div class="who" id="invCust">—</div>
+        <div class="ph" id="invPhone"></div>
+      </div>
+      ${DOC_TABLE}
+      <div class="doc-bottom">
+        <div class="doc-side">
+          <div class="doc-pay" id="invPayBox" style="display:none">
+            <div class="l">Payment details</div>
+            <div id="invPayRows"></div>
+          </div>
+          <div class="doc-note" id="invNotesBox" style="display:none">
+            <div class="l">Note</div><div id="invNotes"></div>
+          </div>
+        </div>
+        <div class="doc-totals"><table><tbody id="invTotals"></tbody></table></div>
+      </div>
+      <div class="doc-foot"><div class="main" id="invFootMain"></div><div id="invFootSub"></div></div>
+    </div>`,
+  minimal: `
+    <div class="doc-inner">
+      <div class="m-head">
+        <div class="n" id="invBizName">—</div>
+        <div class="s" id="invBizSlogan"></div>
+        <div class="c" id="invBizContact"></div>
+      </div>
+      <hr class="hair">
+      <div class="m-meta">
+        <div><span id="invTitle">Invoice</span> <b id="invNo">—</b></div>
+        <div id="invDate"></div>
+      </div>
+      <div class="m-to">
+        <div class="lbl">Billed to</div>
+        <div class="who" id="invCust">—</div>
+        <div class="ph" id="invPhone"></div>
+      </div>
+      ${DOC_TABLE}
+      <div class="doc-totals"><table><tbody id="invTotals"></tbody></table></div>
+      <div class="m-pay" id="invPayBox" style="display:none">
+        <div class="lbl">Payment details</div>
+        <div id="invPayRows"></div>
+      </div>
+      <div class="m-note" id="invNotesBox" style="display:none"><div class="lbl">Note</div><div id="invNotes"></div></div>
+      <div class="m-foot"><span class="main" id="invFootMain"></span><span id="invFootSub"></span></div>
+    </div>`,
+  modern: `
+    <div class="doc-inner">
+      <div class="g-head">
+        <div>
+          <div class="n" id="invBizName">—</div>
+          <div class="s" id="invBizSlogan"></div>
+          <div class="c" id="invBizContact"></div>
+        </div>
+        <div class="g-title"><div class="t" id="invTitle">Invoice</div></div>
+      </div>
+      <div class="g-meta">
+        <div><div class="l">Invoice number</div><div class="v2" id="invNo">—</div></div>
+        <div><div class="l">Date</div><div class="v2" id="invDate"></div></div>
+      </div>
+      <div class="g-due">
+        <div><div class="l">Amount due</div><div class="big" id="invDue">—</div></div>
+        <div class="who-wrap">
+          <div class="l">Billed to</div>
+          <div class="who" id="invCust">—</div>
+          <div class="ph" id="invPhone"></div>
+        </div>
+      </div>
+      ${DOC_TABLE}
+      <div class="doc-totals"><table><tbody id="invTotals"></tbody></table></div>
+      <div class="g-pay" id="invPayBox" style="display:none">
+        <div class="l">Payment details</div>
+        <div id="invPayRows"></div>
+      </div>
+      <div class="g-note" id="invNotesBox" style="display:none"><div id="invNotes"></div></div>
+      <div class="g-foot"><span class="main" id="invFootMain"></span> <span id="invFootSub"></span></div>
+    </div>`,
+  technical: `
+    <div class="t-band">
+      <div class="n" id="invBizName">—</div>
+      <div class="no-wrap">
+        <div class="t" id="invTitle">Invoice</div>
+        <div class="no" id="invNo">—</div>
+      </div>
+    </div>
+    <div class="doc-inner">
+      <div class="t-meta">
+        <div class="cell"><div class="l">Date</div><div class="v2" id="invDate"></div></div>
+        <div class="cell"><div class="l">Contact</div><div class="v2" id="invBizContact"></div></div>
+        <div class="cell" style="display:none"><span id="invBizSlogan"></span></div>
+      </div>
+      <div class="t-to">
+        <div class="lbl">Bill to</div>
+        <div class="who" id="invCust">—</div>
+        <div class="ph" id="invPhone"></div>
+      </div>
+      ${DOC_TABLE}
+      <div class="doc-totals"><table><tbody id="invTotals"></tbody></table></div>
+      <div class="t-pay" id="invPayBox" style="display:none">
+        <div class="lbl" style="margin-bottom:5px">Payment details</div>
+        <div id="invPayRows"></div>
+      </div>
+      <div class="t-note" id="invNotesBox" style="display:none"><div class="lbl">Note</div><div id="invNotes"></div></div>
+      <div class="t-foot"><span class="main" id="invFootMain"></span><span id="invFootSub"></span></div>
+    </div>`
+};
+
+function setDocShell(tpl) {
+  if (!DOC_TPLS.includes(tpl)) tpl = 'classic';
+  const doc = $('invoice');
+  doc.className = 'doc tpl-' + tpl;
+  doc.innerHTML = DOC_SHELLS[tpl];
+  fillDocBusiness();
+  render();
+}
+
+function fillDocBusiness() {
   const b = state.business;
-  document.body.dataset.theme = THEMES.includes(b.theme) ? b.theme : 'indigo';
-  document.title = b.name + ' — ' + b.docNoun + 's';
-  $('bizAvatar').textContent = initials(b.name);
-  $('bizName').textContent = $('invBizName').textContent = b.name;
-  $('bizSlogan').textContent = $('invBizSlogan').textContent = b.slogan || '';
+  $('invBizName').textContent = b.name;
+  $('invBizSlogan').textContent = b.slogan || '';
   $('invBizContact').textContent = [b.contactPhone, b.socialHandle].filter(Boolean).join(' · ');
   $('invTitle').textContent = b.docNoun;
   $('invFootMain').textContent = 'Thank you for your order.';
@@ -838,11 +1052,54 @@ function applyBusiness() {
     ${p.account_name ? `<div class="row"><span>Account name</span><b>${esc(p.account_name)}</b></div>` : ''}
     ${p.bank ? `<div class="row"><span>Bank</span><b>${esc(p.bank)}</b></div>` : ''}
     <div class="row"><span>Account number</span><b>${esc(p.account_number)}</b></div>`).join('');
+}
+
+function tplThumb(t) {
+  const A = 'var(--accent)';
+  const map = {
+    classic: `<div class="thumb"><i style="left:0;right:0;top:0;height:5px;background:${A}"></i><i style="left:12%;top:13px;width:40%;height:4px;background:#d7dae0"></i><i style="left:12%;top:24px;right:12%;height:3px;background:#eceef1"></i><i style="left:12%;top:31px;right:12%;height:3px;background:#eceef1"></i><i style="right:12%;bottom:7px;width:30%;height:6px;background:${A};opacity:.3"></i></div>`,
+    minimal: `<div class="thumb"><i style="left:35%;right:35%;top:8px;height:4px;background:#c9c9ce"></i><i style="left:12%;top:19px;right:12%;height:1px;background:#e5e5ea"></i><i style="left:12%;top:27px;right:12%;height:3px;background:#eceef1"></i><i style="left:12%;top:34px;right:12%;height:3px;background:#eceef1"></i><i style="right:12%;bottom:7px;width:26%;height:2px;background:#1d1d1f"></i></div>`,
+    modern: `<div class="thumb"><i style="left:12%;top:7px;width:34%;height:4px;background:#d7dae0"></i><i style="left:12%;top:16px;right:12%;height:13px;border-radius:4px;background:${A};opacity:.2"></i><i style="left:12%;top:35px;right:12%;height:4px;border-radius:2px;background:#eceef1"></i><i style="left:12%;top:43px;right:12%;height:3px;background:#f1f3f4"></i></div>`,
+    technical: `<div class="thumb"><i style="left:0;right:0;top:0;height:11px;background:#0b0b0c"></i><i style="left:12%;top:18px;right:12%;height:3px;background:#d7dae0"></i><i style="left:12%;top:25px;right:12%;height:3px;background:#eceef1"></i><i style="left:0;right:0;bottom:0;height:7px;background:#0b0b0c"></i></div>`
+  };
+  return map[t];
+}
+
+function drawTplPicker() {
+  const host = $('tplPicker');
+  if (!host) return;
+  host.innerHTML = '';
+  DOC_TPLS.forEach(t => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'tpl-pick' + ((state.business.invoiceTemplate || 'classic') === t ? ' active' : '');
+    b.innerHTML = tplThumb(t) + `<div class="nm2">${TPL_META[t][0]}</div><div class="d2">${TPL_META[t][1]}</div>`;
+    b.addEventListener('click', () => {
+      state.business.invoiceTemplate = t;
+      setDocShell(t);
+      drawTplPicker();
+      toast('Design preview updated — save settings to keep it');
+    });
+    host.appendChild(b);
+  });
+}
+
+/* ================= business → UI ================= */
+function applyBusiness() {
+  const b = state.business;
+  document.body.dataset.theme = THEMES.includes(b.theme) ? b.theme : 'indigo';
+  document.title = b.name + ' — ' + b.docNoun + 's';
+  $('bizAvatar').textContent = initials(b.name);
+  $('bizName').textContent = b.name;
+  $('bizSlogan').textContent = b.slogan || '';
+  setDocShell(b.invoiceTemplate);
+  drawTplPicker();
   // settings form
   $('setName').value = b.name; $('setSlogan').value = b.slogan || '';
   $('setPhone').value = b.contactPhone || ''; $('setSocial').value = b.socialHandle || '';
   $('setPrefix').value = b.invoicePrefix; $('setDial').value = b.countryDial;
   $('setFooter').value = b.footerNote || '';
+  const pays = b.payments || [];
   const p0 = pays[0] || {};
   $('setAcctName').value = p0.account_name || ''; $('setBank').value = p0.bank || ''; $('setAcctNo').value = p0.account_number || '';
   themeChips($('setThemes'), b.theme, t => { state.business.theme = t; document.body.dataset.theme = t; });
@@ -950,6 +1207,8 @@ function render() {
   if (discount) t += `<tr><td>Discount</td><td class="num">−${fmt(discount)}</td></tr>`;
   t += `<tr class="grand"><td>Total due</td><td class="num">${fmt(total)}</td></tr>`;
   $('invTotals').innerHTML = t;
+  const due = $('invDue');
+  if (due) due.textContent = fmt(total);
   $('dockTotal').textContent = fmt(total);
   const notes = $('notes').value.trim();
   $('invNotesBox').style.display = notes ? '' : 'none';
@@ -1368,6 +1627,7 @@ $('setSave').addEventListener('click', async () => {
     $('setSave').disabled = true;
     await api('PUT', '/api/business', {
       name: $('setName').value, slogan: $('setSlogan').value, theme: state.business.theme,
+      invoiceTemplate: state.business.invoiceTemplate,
       contactPhone: $('setPhone').value, socialHandle: $('setSocial').value,
       invoicePrefix: $('setPrefix').value, countryDial: $('setDial').value, footerNote: $('setFooter').value,
       payments: $('setAcctNo').value.trim()

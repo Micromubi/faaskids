@@ -113,6 +113,9 @@ CREATE TABLE IF NOT EXISTS records (
 CREATE INDEX IF NOT EXISTS idx_rec_cust ON records(business_id, customer_id, created_at DESC);
 `);
 
+/* ---- lightweight migrations for existing databases ---- */
+try { db.exec("ALTER TABLE businesses ADD COLUMN invoice_template TEXT NOT NULL DEFAULT 'classic'"); } catch (e) { /* column exists */ }
+
 /* ---- category presets: starter catalogue, modules, record templates ---- */
 const PRESETS = [
   {

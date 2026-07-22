@@ -40,8 +40,10 @@ const bizPublic = b => b && {
   id: b.id, name: b.name, slogan: b.slogan, category: b.category, theme: b.theme,
   contactPhone: b.contact_phone, socialHandle: b.social_handle,
   invoicePrefix: b.invoice_prefix, currency: b.currency, countryDial: b.country_dial,
-  payments: JSON.parse(b.payment_json || '[]'), footerNote: b.footer_note, docNoun: b.doc_noun
+  payments: JSON.parse(b.payment_json || '[]'), footerNote: b.footer_note, docNoun: b.doc_noun,
+  invoiceTemplate: b.invoice_template || 'classic'
 };
+const INVOICE_TEMPLATES = ['classic', 'minimal', 'modern', 'technical'];
 
 app.get('/api/me', (req, res) => {
   if (!req.user) return res.json({ user: null });
@@ -112,13 +114,14 @@ app.put('/api/business', requireAuth, requireBusiness, (req, res) => {
         account_name: str(p.account_name, 80), bank: str(p.bank, 60), account_number: str(p.account_number, 30)
       }))
     : JSON.parse(cur.payment_json);
+  const tpl = INVOICE_TEMPLATES.includes(b.invoiceTemplate) ? b.invoiceTemplate : (cur.invoice_template || 'classic');
   db.prepare(`UPDATE businesses SET name=?, slogan=?, theme=?, contact_phone=?, social_handle=?,
-    invoice_prefix=?, country_dial=?, payment_json=?, footer_note=? WHERE id=?`)
+    invoice_prefix=?, country_dial=?, payment_json=?, footer_note=?, invoice_template=? WHERE id=?`)
     .run(str(b.name, 60) || cur.name, str(b.slogan, 80),
       str(b.theme, 20) || cur.theme, str(b.contactPhone, 30), str(b.socialHandle, 40),
       (str(b.invoicePrefix, 6).toUpperCase().replace(/[^A-Z0-9]/g, '') || cur.invoice_prefix),
       str(b.countryDial, 4).replace(/\D/g, '') || cur.country_dial,
-      JSON.stringify(payments), str(b.footerNote, 200), cur.id);
+      JSON.stringify(payments), str(b.footerNote, 200), tpl, cur.id);
   res.json({ ok: true, business: bizPublic(db.prepare('SELECT * FROM businesses WHERE id = ?').get(cur.id)) });
 });
 
