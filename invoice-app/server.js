@@ -2,8 +2,8 @@ const path = require('path');
 const express = require('express');
 const db = require('./lib/db');
 const {
-  requestCode, deliverCode, verifyCode, setSessionCookie,
-  sessionMiddleware, requireAuth, requireBusiness, requireAdmin, signOut, httpErr
+  login, createSession, createMember, setCode, resetMemberCode, genTempCode, validCode,
+  setSessionCookie, sessionMiddleware, requireAuth, requireBusiness, requireAdmin, signOut, httpErr
 } = require('./lib/auth');
 
 const app = express();
@@ -17,20 +17,18 @@ const requireOwner = (req, res, next) =>
 const num = v => Math.max(0, Number(v) || 0);
 const str = (v, max = 500) => String(v == null ? '' : v).trim().slice(0, max);
 
-/* ============ AUTH ============ */
-app.post('/api/auth/request', wrap(async (req, res) => {
-  const { email, code } = requestCode(req.body.email);
-  const { delivered } = await deliverCode(email, code);
-  // Without an email provider configured (dev / first run), surface the code
-  // directly so the app is usable out of the box.
-  res.json(delivered ? { sent: true } : { sent: true, devCode: code });
+/* ============ AUTH: business name + personal code ============ */
+app.post('/api/auth/login', wrap(async (req, res) => {
+  const { member, token, mustChange } = login(req.body.business, req.body.code);
+  setSessionCookie(res, token);
+  res.json({ ok: true, mustChange, role: member.role });
 }));
 
-app.post('/api/auth/verify', wrap(async (req, res) => {
-  const { user, token } = verifyCode(req.body.email, req.body.code);
-  setSessionCookie(res, token);
-  res.json({ ok: true, isAdmin: !!user.is_admin });
-}));
+/* change own code (also completes the forced change after a temporary code) */
+app.post('/api/auth/setcode', requireAuth, (req, res) => {
+  setCode(req.member, req.body.currentCode, req.body.newCode);
+  res.json({ ok: true });
+});
 
 app.post('/api/auth/signout', requireAuth, (req, res) => {
   signOut(req, res, !!req.body.everywhere);
@@ -48,9 +46,10 @@ const bizPublic = b => b && {
 const INVOICE_TEMPLATES = ['classic', 'minimal', 'modern', 'technical'];
 
 app.get('/api/me', (req, res) => {
-  if (!req.user) return res.json({ user: null });
+  if (!req.member) return res.json({ user: null });
   res.json({
-    user: { email: req.user.email, isAdmin: !!req.user.is_admin },
+    user: { email: req.member.label, isAdmin: !!req.member.is_admin },
+    mustChange: !!req.member.must_change,
     role: req.business ? req.role : null,
     business: bizPublic(req.business),
     catalogue: req.business
@@ -64,12 +63,15 @@ app.get('/api/categories', (req, res) => {
     .map(c => ({ slug: c.slug, name: c.name, preset: JSON.parse(c.preset_json) })));
 });
 
-/* ============ ONBOARDING ============ */
-app.post('/api/onboard', requireAuth, wrap(async (req, res) => {
-  if (req.business) throw httpErr(409, 'Business already set up');
+/* ============ ONBOARDING (signup) ============ */
+app.post('/api/onboard', wrap(async (req, res) => {
+  if (req.member) throw httpErr(409, 'You are already signed in to a business');
   const b = req.body || {};
   const name = str(b.name, 60);
   if (!name) throw httpErr(400, 'Business name is required');
+  if (!validCode(String(b.ownerCode || '').trim())) throw httpErr(400, 'Choose a sign-in code of 4–32 characters');
+  if (db.prepare('SELECT 1 FROM businesses WHERE name = ? COLLATE NOCASE').get(name))
+    throw httpErr(409, 'That business name is already taken — pick a slightly different one');
   const cat = db.prepare('SELECT * FROM categories WHERE slug = ?').get(str(b.category, 30)) ||
     db.prepare("SELECT * FROM categories WHERE slug = 'other'").get();
   const preset = JSON.parse(cat.preset_json);
@@ -88,11 +90,14 @@ app.post('/api/onboard', requireAuth, wrap(async (req, res) => {
       : (CATEGORY_DEFAULT_TPL[cat.slug] || 'classic'));
 
   const tx = db.transaction(() => {
+    // legacy column: satisfy owner_user_id with a stub row in the retired users table
+    const stub = db.prepare('INSERT INTO users (email, is_admin, created_at) VALUES (?, 0, ?)')
+      .run('biz:' + name.toLowerCase() + ':' + Date.now(), Date.now());
     const r = db.prepare(`INSERT INTO businesses
       (owner_user_id, name, slogan, category, theme, contact_phone, social_handle,
        invoice_prefix, payment_json, footer_note, doc_noun, invoice_template, created_at)
       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`)
-      .run(req.user.id, name, str(b.slogan, 80), cat.slug, str(b.theme, 20) || 'rose',
+      .run(stub.lastInsertRowid, name, str(b.slogan, 80), cat.slug, str(b.theme, 20) || 'rose',
         str(b.contactPhone, 30), str(b.socialHandle, 40), prefix,
         JSON.stringify(payments), str(b.footerNote, 200) || str(preset.footerNote || '', 200), preset.docNoun || 'Invoice', tplChoice, Date.now());
     const bizId = r.lastInsertRowid;
@@ -105,11 +110,14 @@ app.post('/api/onboard', requireAuth, wrap(async (req, res) => {
     const insTpl = db.prepare('INSERT INTO record_templates (business_id, name, fields_json, sort) VALUES (?, ?, ?, ?)');
     (preset.templates || []).forEach((t, i) =>
       insTpl.run(bizId, t.name, JSON.stringify(t.fields.map(f => ({ label: f }))), i));
-    return bizId;
+    // the very first owner on this install becomes the app admin
+    const isFirst = db.prepare('SELECT COUNT(*) n FROM members').get().n === 0;
+    const memberId = createMember(bizId, 'Owner', 'owner', String(b.ownerCode).trim(), { isAdmin: isFirst });
+    return { bizId, memberId };
   });
-  tx();
-  req.business = db.prepare('SELECT * FROM businesses WHERE owner_user_id = ?').get(req.user.id);
-  res.json({ ok: true, business: bizPublic(req.business) });
+  const { bizId, memberId } = tx();
+  setSessionCookie(res, createSession(memberId));
+  res.json({ ok: true, business: bizPublic(db.prepare('SELECT * FROM businesses WHERE id = ?').get(bizId)) });
 }));
 
 /* ============ SETTINGS ============ */
@@ -314,38 +322,37 @@ app.delete('/api/templates/:id', requireAuth, requireBusiness, requireOwner, (re
   res.json({ ok: true });
 });
 
-/* ============ TEAM (staff access to this business) ============ */
+/* ============ TEAM (staff codes for this business) ============ */
 app.get('/api/team', requireAuth, requireBusiness, requireOwner, (req, res) => {
-  const staff = db.prepare(`SELECT u.id, u.email, m.role, m.created_at,
-      (SELECT MAX(last_seen_at) FROM sessions s WHERE s.user_id = u.id) last_seen_at
-    FROM memberships m JOIN users u ON u.id = m.user_id
-    WHERE m.business_id = ? ORDER BY m.created_at`).all(req.business.id);
-  res.json([{ id: req.user.id, email: req.user.email, role: 'owner' }, ...staff]);
+  res.json(db.prepare(`SELECT m.id, m.label, m.role, m.must_change, m.created_at,
+      (SELECT MAX(last_seen_at) FROM sessions s WHERE s.member_id = m.id) last_seen_at
+    FROM members m WHERE m.business_id = ?
+    ORDER BY CASE m.role WHEN 'owner' THEN 0 ELSE 1 END, m.created_at`).all(req.business.id));
 });
 
 app.post('/api/team', requireAuth, requireBusiness, requireOwner, (req, res) => {
-  const email = str(req.body.email, 120).toLowerCase();
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw httpErr(400, 'Enter a valid email address');
-  if (email === req.user.email) throw httpErr(400, 'That is your own email');
-  let user = db.prepare('SELECT * FROM users WHERE email = ?').get(email);
-  if (user) {
-    if (db.prepare('SELECT 1 FROM businesses WHERE owner_user_id = ?').get(user.id))
-      throw httpErr(400, 'That person already runs their own business on this app');
-    const m = db.prepare('SELECT business_id FROM memberships WHERE user_id = ?').get(user.id);
-    if (m && m.business_id === req.business.id) throw httpErr(400, 'Already on your team');
-    if (m) throw httpErr(400, 'That person is already on another business\u2019s team');
-  } else {
-    const r = db.prepare('INSERT INTO users (email, is_admin, created_at) VALUES (?, 0, ?)').run(email, Date.now());
-    user = { id: r.lastInsertRowid };
-  }
-  db.prepare('INSERT INTO memberships (user_id, business_id, role, created_at) VALUES (?, ?, ?, ?)')
-    .run(user.id, req.business.id, 'staff', Date.now());
-  res.json({ ok: true });
+  const label = str(req.body.name, 60);
+  if (!label) throw httpErr(400, 'Enter the worker\u2019s name');
+  const count = db.prepare('SELECT COUNT(*) n FROM members WHERE business_id = ?').get(req.business.id).n;
+  if (count >= 20) throw httpErr(400, 'Team is full (20 members max)');
+  const temp = genTempCode();
+  createMember(req.business.id, label, 'staff', temp, { mustChange: true });
+  res.json({ ok: true, tempCode: temp });
 });
 
-app.delete('/api/team/:userId', requireAuth, requireBusiness, requireOwner, (req, res) => {
-  db.prepare('DELETE FROM memberships WHERE business_id = ? AND user_id = ?').run(req.business.id, req.params.userId);
-  db.prepare('DELETE FROM sessions WHERE user_id = ?').run(req.params.userId);
+app.post('/api/team/:memberId/reset', requireAuth, requireBusiness, requireOwner, (req, res) => {
+  const m = db.prepare('SELECT * FROM members WHERE business_id = ? AND id = ?').get(req.business.id, req.params.memberId);
+  if (!m) throw httpErr(404, 'Not on your team');
+  if (m.id === req.member.id) throw httpErr(400, 'Change your own code under Account instead');
+  res.json({ ok: true, tempCode: resetMemberCode(m.id) });
+});
+
+app.delete('/api/team/:memberId', requireAuth, requireBusiness, requireOwner, (req, res) => {
+  const m = db.prepare('SELECT * FROM members WHERE business_id = ? AND id = ?').get(req.business.id, req.params.memberId);
+  if (!m) throw httpErr(404, 'Not on your team');
+  if (m.role === 'owner') throw httpErr(400, 'The owner cannot be removed');
+  db.prepare('DELETE FROM members WHERE id = ?').run(m.id);
+  db.prepare('DELETE FROM sessions WHERE member_id = ?').run(m.id);
   res.json({ ok: true });
 });
 
@@ -353,7 +360,7 @@ app.delete('/api/team/:userId', requireAuth, requireBusiness, requireOwner, (req
 app.get('/api/admin/overview', requireAuth, requireAdmin, (req, res) => {
   const weekAgo = Date.now() - 7 * 24 * 3600 * 1000;
   res.json({
-    users: db.prepare('SELECT COUNT(*) n FROM users').get().n,
+    users: db.prepare('SELECT COUNT(*) n FROM members').get().n,
     businesses: db.prepare('SELECT COUNT(*) n FROM businesses').get().n,
     invoices: db.prepare('SELECT COUNT(*) n FROM invoices').get().n,
     invoicesThisWeek: db.prepare('SELECT COUNT(*) n FROM invoices WHERE created_at > ?').get(weekAgo).n,
@@ -362,11 +369,12 @@ app.get('/api/admin/overview', requireAuth, requireAdmin, (req, res) => {
 });
 
 app.get('/api/admin/businesses', requireAuth, requireAdmin, (req, res) => {
-  res.json(db.prepare(`SELECT b.id, b.name, b.category, b.created_at, u.email owner,
+  res.json(db.prepare(`SELECT b.id, b.name, b.category, b.created_at,
+      (SELECT COUNT(*) FROM members m WHERE m.business_id = b.id) team_size,
       (SELECT COUNT(*) FROM invoices i WHERE i.business_id = b.id) invoices,
       (SELECT COALESCE(SUM(total),0) FROM invoices i WHERE i.business_id = b.id) revenue,
       (SELECT MAX(created_at) FROM invoices i WHERE i.business_id = b.id) last_invoice_at
-    FROM businesses b JOIN users u ON u.id = b.owner_user_id ORDER BY b.created_at DESC`).all());
+    FROM businesses b ORDER BY b.created_at DESC`).all().map(r => ({ ...r, owner: r.team_size + ' member(s)' })));
 });
 
 app.delete('/api/admin/businesses/:id', requireAuth, requireAdmin, (req, res) => {
@@ -375,17 +383,17 @@ app.delete('/api/admin/businesses/:id', requireAuth, requireAdmin, (req, res) =>
 });
 
 app.get('/api/admin/users', requireAuth, requireAdmin, (req, res) => {
-  res.json(db.prepare(`SELECT u.id, u.email, u.is_admin, u.created_at,
-      (SELECT name FROM businesses b WHERE b.owner_user_id = u.id) business,
-      (SELECT MAX(last_seen_at) FROM sessions s WHERE s.user_id = u.id) last_seen_at
-    FROM users u ORDER BY u.created_at DESC`).all());
+  res.json(db.prepare(`SELECT m.id, (m.label || ' (' || m.role || ')') AS email, m.is_admin, m.created_at,
+      (SELECT name FROM businesses b WHERE b.id = m.business_id) business,
+      (SELECT MAX(last_seen_at) FROM sessions s WHERE s.member_id = m.id) last_seen_at
+    FROM members m ORDER BY m.created_at DESC`).all());
 });
 
 app.put('/api/admin/users/:id', requireAuth, requireAdmin, (req, res) => {
-  const target = db.prepare('SELECT * FROM users WHERE id = ?').get(req.params.id);
-  if (!target) throw httpErr(404, 'User not found');
-  if (target.id === req.user.id && !req.body.isAdmin) throw httpErr(400, 'You cannot remove your own admin access');
-  db.prepare('UPDATE users SET is_admin = ? WHERE id = ?').run(req.body.isAdmin ? 1 : 0, target.id);
+  const target = db.prepare('SELECT * FROM members WHERE id = ?').get(req.params.id);
+  if (!target) throw httpErr(404, 'Member not found');
+  if (target.id === req.member.id && !req.body.isAdmin) throw httpErr(400, 'You cannot remove your own admin access');
+  db.prepare('UPDATE members SET is_admin = ? WHERE id = ?').run(req.body.isAdmin ? 1 : 0, target.id);
   res.json({ ok: true });
 });
 

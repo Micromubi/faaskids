@@ -63,15 +63,15 @@
   <div class="panel">
     <h2>Businesses</h2>
     <div class="tablewrap"><table>
-      <thead><tr><th>Business</th><th>Owner</th><th>Category</th><th class="num">Invoices</th><th class="num">Revenue</th><th>Last activity</th><th></th></tr></thead>
+      <thead><tr><th>Business</th><th>Team</th><th>Category</th><th class="num">Invoices</th><th class="num">Revenue</th><th>Last activity</th><th></th></tr></thead>
       <tbody id="bizRows"></tbody>
     </table></div>
   </div>
 
   <div class="panel">
-    <h2>Users</h2>
+    <h2>Members</h2>
     <div class="tablewrap"><table>
-      <thead><tr><th>Email</th><th>Business</th><th>Role</th><th>Last seen</th><th></th></tr></thead>
+      <thead><tr><th>Member</th><th>Business</th><th>App admin</th><th>Last seen</th><th></th></tr></thead>
       <tbody id="userRows"></tbody>
     </table></div>
   </div>
@@ -125,7 +125,7 @@ async function loadStats() {
   const s = await api('GET', '/api/admin/overview');
   $('stats').innerHTML = `
     <div class="tile"><div class="v">${s.businesses}</div><div class="l">Businesses</div></div>
-    <div class="tile"><div class="v">${s.users}</div><div class="l">Users</div></div>
+    <div class="tile"><div class="v">${s.users}</div><div class="l">Members</div></div>
     <div class="tile"><div class="v">${s.invoices}</div><div class="l">Invoices total</div></div>
     <div class="tile"><div class="v">${s.invoicesThisWeek}</div><div class="l">This week</div></div>
     <div class="tile"><div class="v">${fmtN(s.revenueTracked)}</div><div class="l">Revenue tracked</div></div>`;

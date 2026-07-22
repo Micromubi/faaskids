@@ -458,19 +458,24 @@
   <div class="stage-card">
     <div id="authStep1">
       <h2>Sign in</h2>
-      <div class="sub">Branded invoices, package labels and customer records for your business.</div>
-      <div class="field"><label for="authEmail">Email address</label>
-        <input type="email" id="authEmail" placeholder="you@example.com" autocomplete="email"></div>
-      <button class="btn btn-primary" id="authSend">Continue</button>
+      <div class="sub">Enter your business name and your personal code.</div>
+      <div class="field"><label for="authBiz">Business name</label>
+        <input type="text" id="authBiz" placeholder="e.g. Bella Stitches" autocomplete="organization"></div>
+      <div class="field"><label for="authCode">Your code</label>
+        <input type="password" id="authCode" placeholder="••••" maxlength="32" autocomplete="current-password" style="font-family:var(--disp);letter-spacing:4px"></div>
+      <button class="btn btn-primary" id="authLogin">Sign in</button>
+      <button class="btn btn-ghost" id="authCreate" style="width:100%;margin-top:10px">Create a new business</button>
     </div>
-    <div id="authStep2" class="hidden">
-      <h2>Enter your code</h2>
-      <div class="sub">We sent a 6-digit code to <b id="authEmailEcho"></b></div>
-      <div class="field">
-        <input type="tel" id="authCode" placeholder="000000" maxlength="6" inputmode="numeric" autocomplete="one-time-code" style="font-family:var(--disp);letter-spacing:6px;text-align:center;font-size:18px"></div>
-      <button class="btn btn-primary" id="authVerify">Sign in</button>
-      <div class="code-note" id="devCodeNote">No email service is configured, so here is your code:<br><span class="big" id="devCode"></span></div>
-      <button class="btn btn-ghost" id="authBack" style="width:100%;margin-top:10px">Use a different email</button>
+    <div id="authChange" class="hidden">
+      <h2>Set your own code</h2>
+      <div class="sub">Your temporary code worked. Now choose your personal secret code (4–32 characters) — you will use it every time you sign in.</div>
+      <div class="field hidden" id="chgCurWrap"><label>Temporary code</label>
+        <input type="password" id="chgCur" maxlength="32"></div>
+      <div class="field"><label>New code</label>
+        <input type="password" id="chgNew" maxlength="32"></div>
+      <div class="field"><label>New code again</label>
+        <input type="password" id="chgNew2" maxlength="32"></div>
+      <button class="btn btn-primary" id="chgSave">Save my code</button>
     </div>
     <div class="err" id="authErr"></div>
   </div>
@@ -488,6 +493,7 @@
       <div class="sub">This sets up your starter catalogue and tools. Everything can be changed later.</div>
       <div class="cat-grid" id="catGrid"></div>
       <button class="btn btn-primary" id="obNext1" style="margin-top:16px" disabled>Continue</button>
+      <button class="btn btn-ghost" id="obBackAuth" style="width:100%;margin-top:10px">Back to sign in</button>
     </div>
 
     <div id="obStep2" class="hidden">
@@ -514,6 +520,12 @@
         <div class="field"><label>Account number</label><input type="tel" id="obAcctNo" placeholder="0000000000"></div>
       </div>
       <div class="field"><label>Invoice number prefix</label><input type="text" id="obPrefix" maxlength="6" placeholder="e.g. BS" style="text-transform:uppercase"></div>
+      <div class="row2">
+        <div class="field"><label>Your sign-in code * (4+ chars)</label>
+          <input type="password" id="obCode" maxlength="32" placeholder="Choose a code"></div>
+        <div class="field"><label>Code again *</label>
+          <input type="password" id="obCode2" maxlength="32" placeholder="Repeat it"></div>
+      </div>
       <label style="margin-top:14px">Starter catalogue — items and usual prices</label>
       <div id="obCat"></div>
       <button class="btn btn-add" id="obCatAdd">+ Add item</button>
@@ -674,18 +686,20 @@
           </div>
           <div class="card span2 owner-card" id="teamCard">
             <h2>Team</h2>
-            <div class="muted" style="margin-bottom:10px">Staff sign in with their own email (same sign-in screen) and work inside this business — customers, measurements and invoices. They cannot see Sales, change settings, or delete anything.</div>
+            <div class="muted" style="margin-bottom:10px">Each worker gets their own code for this business. They sign in with the business name + their code, and can work with customers, measurements and invoices — but cannot see Sales, change settings, or delete anything.</div>
             <div id="teamList"></div>
             <div class="row2" style="grid-template-columns:1fr auto;align-items:end;margin-top:10px">
-              <div class="field" style="margin-bottom:0"><input type="email" id="teamEmail" placeholder="worker@email.com"></div>
-              <button class="btn btn-ghost" id="teamAdd" style="min-height:40px">+ Add to team</button>
+              <div class="field" style="margin-bottom:0"><input type="text" id="teamName" maxlength="60" placeholder="Worker's name, e.g. Musa"></div>
+              <button class="btn btn-ghost" id="teamAdd" style="min-height:40px">+ Add worker</button>
             </div>
+            <div class="code-note" id="teamTemp" style="margin-top:10px"></div>
             <div class="err" id="teamErr"></div>
           </div>
           <div class="card span2">
             <h2>Account</h2>
             <div class="muted" id="roleNote" style="margin-bottom:10px"></div>
             <div style="display:flex;gap:10px;flex-wrap:wrap">
+              <button class="btn btn-ghost" id="changeMyCode">Change my sign-in code</button>
               <button class="btn btn-ghost" id="signOut">Sign out on this device</button>
               <button class="btn btn-ghost" id="signOutAll">Sign out everywhere</button>
             </div>
@@ -801,7 +815,14 @@ async function boot() {
   const me = await api('GET', '/api/me');
   state.user = me.user; state.business = me.business; state.role = me.role || 'owner'; state.catalogue = me.catalogue || [];
   if (!me.user) return show('auth');
-  if (!me.business) { state.categories = await api('GET', '/api/categories'); return show('onboard'); }
+  if (me.mustChange) { // signed in on a temporary code: must set a personal one first
+    show('auth');
+    $('authStep1').classList.add('hidden');
+    $('authChange').classList.remove('hidden');
+    $('chgCurWrap').classList.toggle('hidden', !!lastLoginCode);
+    $('chgCur').value = lastLoginCode;
+    return;
+  }
   applyBusiness();
   show('app');
   loadDraft();
@@ -818,34 +839,52 @@ function show(view) {
   if (view === 'onboard') initOnboarding();
 }
 
-/* ================= auth ================= */
-$('authSend').addEventListener('click', async () => {
+/* ================= auth: business name + code ================= */
+let lastLoginCode = '';
+$('authLogin').addEventListener('click', async () => {
   $('authErr').textContent = '';
   try {
-    $('authSend').disabled = true;
-    const r = await api('POST', '/api/auth/request', { email: $('authEmail').value });
-    $('authEmailEcho').textContent = $('authEmail').value.trim();
-    $('authStep1').classList.add('hidden'); $('authStep2').classList.remove('hidden');
-    if (r.devCode) { $('devCode').textContent = r.devCode; $('devCodeNote').classList.add('show'); }
-    $('authCode').focus();
+    $('authLogin').disabled = true;
+    const r = await api('POST', '/api/auth/login', { business: $('authBiz').value, code: $('authCode').value });
+    lastLoginCode = $('authCode').value.trim();
+    if (r.mustChange) {
+      $('authStep1').classList.add('hidden');
+      $('authChange').classList.remove('hidden');
+      $('chgCurWrap').classList.add('hidden');
+      $('chgCur').value = lastLoginCode;
+      $('chgNew').focus();
+    } else {
+      await boot();
+    }
   } catch (e) { $('authErr').textContent = e.message; }
-  finally { $('authSend').disabled = false; }
+  finally { $('authLogin').disabled = false; }
 });
-$('authBack').addEventListener('click', () => {
-  $('authStep2').classList.add('hidden'); $('authStep1').classList.remove('hidden');
-  $('devCodeNote').classList.remove('show'); $('authErr').textContent = '';
-});
-$('authVerify').addEventListener('click', async () => {
+$('chgSave').addEventListener('click', async () => {
   $('authErr').textContent = '';
+  const n1 = $('chgNew').value.trim(), n2 = $('chgNew2').value.trim();
+  if (n1.length < 4) { $('authErr').textContent = 'Code must be at least 4 characters'; return; }
+  if (n1 !== n2) { $('authErr').textContent = 'The two codes do not match'; return; }
   try {
-    $('authVerify').disabled = true;
-    await api('POST', '/api/auth/verify', { email: $('authEmail').value, code: $('authCode').value });
+    $('chgSave').disabled = true;
+    await api('POST', '/api/auth/setcode', { currentCode: $('chgCur').value.trim(), newCode: n1 });
+    lastLoginCode = '';
+    $('authChange').classList.add('hidden');
+    $('authStep1').classList.remove('hidden');
+    toast('Your code is set — welcome!');
     await boot();
   } catch (e) { $('authErr').textContent = e.message; }
-  finally { $('authVerify').disabled = false; }
+  finally { $('chgSave').disabled = false; }
 });
-$('authCode').addEventListener('keydown', e => { if (e.key === 'Enter') $('authVerify').click(); });
-$('authEmail').addEventListener('keydown', e => { if (e.key === 'Enter') $('authSend').click(); });
+$('authCreate').addEventListener('click', async () => {
+  $('authErr').textContent = '';
+  try {
+    if (!state.categories.length) state.categories = await api('GET', '/api/categories');
+    show('onboard');
+  } catch (e) { $('authErr').textContent = e.message; }
+});
+$('authCode').addEventListener('keydown', e => { if (e.key === 'Enter') $('authLogin').click(); });
+$('authBiz').addEventListener('keydown', e => { if (e.key === 'Enter') $('authCode').focus(); });
+$('chgNew2').addEventListener('keydown', e => { if (e.key === 'Enter') $('chgSave').click(); });
 
 /* ================= onboarding ================= */
 const ob = { category: null, theme: 'indigo', template: 'classic', catalogue: [] };
@@ -906,6 +945,7 @@ $('obNext1').addEventListener('click', () => {
   drawObTpl();
   obStep(2);
 });
+$('obBackAuth').addEventListener('click', () => show('auth'));
 $('obBack2').addEventListener('click', () => obStep(1));
 $('obNext2').addEventListener('click', () => {
   if (!$('obName').value.trim()) { $('obName').focus(); return; }
@@ -914,9 +954,13 @@ $('obNext2').addEventListener('click', () => {
 $('obBack3').addEventListener('click', () => obStep(2));
 $('obFinish').addEventListener('click', async () => {
   $('obErr').textContent = '';
+  const c1 = $('obCode').value.trim(), c2 = $('obCode2').value.trim();
+  if (c1.length < 4) { $('obErr').textContent = 'Choose a sign-in code of at least 4 characters'; return; }
+  if (c1 !== c2) { $('obErr').textContent = 'The two codes do not match'; return; }
   try {
     $('obFinish').disabled = true;
     await api('POST', '/api/onboard', {
+      ownerCode: c1,
       category: ob.category.slug, name: $('obName').value, slogan: $('obSlogan').value,
       contactPhone: $('obPhone').value, socialHandle: $('obSocial').value, theme: ob.theme,
       invoiceTemplate: ob.template,
@@ -1141,7 +1185,7 @@ function applyBusiness() {
   $('setAcctName').value = p0.account_name || ''; $('setBank').value = p0.bank || ''; $('setAcctNo').value = p0.account_number || '';
   themeChips($('setThemes'), b.theme, t => { state.business.theme = t; document.body.dataset.theme = t; });
   setCatDraw();
-  $('whoami').textContent = state.user.email;
+  $('whoami').textContent = b.name + ' — ' + state.user.email;
   $('adminLink').classList.toggle('hidden', !state.user.isAdmin);
   const staff = state.role !== 'owner';
   document.querySelectorAll('.owner-card').forEach(el => el.classList.toggle('hidden', staff));
@@ -1152,22 +1196,38 @@ function applyBusiness() {
   if (!staff) drawTeam();
 }
 
+function showTempCode(name, code) {
+  const el = $('teamTemp');
+  el.innerHTML = `Give <b>${esc(name)}</b> this temporary code: <span class="big">${esc(code)}</span><br>They sign in with the business name + this code, then choose their own code.`;
+  el.classList.add('show');
+}
+
 async function drawTeam() {
   const host = $('teamList');
   if (!host) return;
   let team = [];
   try { team = await api('GET', '/api/team'); } catch (e) { return; }
   host.innerHTML = team.map(m => `
-    <div class="list-item" data-id="${m.id}">
+    <div class="list-item" data-id="${m.id}" data-label="${esc(m.label)}">
       <div class="info" style="cursor:default">
-        <div class="t1">${esc(m.email)}</div>
-        <div class="t2">${m.role === 'owner' ? 'Owner' : 'Staff' + (m.last_seen_at ? ' · last seen ' + new Date(m.last_seen_at).toLocaleDateString('en-GB') : ' · has not signed in yet')}</div>
+        <div class="t1">${esc(m.label)}</div>
+        <div class="t2">${m.role === 'owner' ? 'Owner' :
+          (m.must_change ? 'Staff · temporary code not used yet'
+            : 'Staff' + (m.last_seen_at ? ' · last seen ' + new Date(m.last_seen_at).toLocaleDateString('en-GB') : ''))}</div>
       </div>
-      ${m.role === 'owner' ? '' : '<button class="del" title="Remove from team">✕</button>'}
+      ${m.role === 'owner' ? '' :
+        '<button class="btn btn-ghost reset" style="min-height:32px;padding:4px 10px;font-size:12px">Reset code</button><button class="del" title="Remove from team">✕</button>'}
     </div>`).join('');
+  host.querySelectorAll('.reset').forEach(btn => btn.addEventListener('click', async () => {
+    const row = btn.closest('.list-item');
+    if (!confirm('Reset ' + row.dataset.label + '\u2019s code? Their old code stops working immediately.')) return;
+    const r = await api('POST', '/api/team/' + row.dataset.id + '/reset');
+    showTempCode(row.dataset.label, r.tempCode);
+    drawTeam();
+  }));
   host.querySelectorAll('.del').forEach(btn => btn.addEventListener('click', async () => {
     const row = btn.closest('.list-item');
-    if (!confirm('Remove this person from your team? They will be signed out everywhere.')) return;
+    if (!confirm('Remove ' + row.dataset.label + ' from your team? Their code stops working immediately.')) return;
     await api('DELETE', '/api/team/' + row.dataset.id);
     drawTeam();
   }));
@@ -1769,12 +1829,25 @@ $('teamAdd').addEventListener('click', async () => {
   $('teamErr').textContent = '';
   try {
     $('teamAdd').disabled = true;
-    await api('POST', '/api/team', { email: $('teamEmail').value });
-    $('teamEmail').value = '';
-    toast('Added to your team');
+    const name = $('teamName').value;
+    const r = await api('POST', '/api/team', { name });
+    $('teamName').value = '';
+    showTempCode(name.trim(), r.tempCode);
     drawTeam();
   } catch (e) { $('teamErr').textContent = e.message; }
   finally { $('teamAdd').disabled = false; }
+});
+
+$('changeMyCode').addEventListener('click', async () => {
+  const cur = prompt('Your current code:');
+  if (cur == null) return;
+  const n1 = prompt('New code (4+ characters):');
+  if (n1 == null) return;
+  if (n1.trim().length < 4) { toast('Code must be at least 4 characters'); return; }
+  try {
+    await api('POST', '/api/auth/setcode', { currentCode: cur, newCode: n1 });
+    toast('Your code has been changed');
+  } catch (e) { toast(e.message); }
 });
 
 $('signOut').addEventListener('click', async () => {

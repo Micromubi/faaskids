@@ -22,12 +22,17 @@ CREATE TABLE IF NOT EXISTS login_codes (
   expires_at INTEGER NOT NULL,
   attempts INTEGER NOT NULL DEFAULT 0
 );
-CREATE TABLE IF NOT EXISTS sessions (
-  token_hash TEXT PRIMARY KEY,
-  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  created_at INTEGER NOT NULL,
-  last_seen_at INTEGER NOT NULL
+CREATE TABLE IF NOT EXISTS members (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  business_id INTEGER NOT NULL REFERENCES businesses(id) ON DELETE CASCADE,
+  label TEXT NOT NULL,
+  code_hash TEXT NOT NULL,
+  role TEXT NOT NULL DEFAULT 'staff',
+  is_admin INTEGER NOT NULL DEFAULT 0,
+  must_change INTEGER NOT NULL DEFAULT 0,
+  created_at INTEGER NOT NULL
 );
+CREATE INDEX IF NOT EXISTS idx_members_biz ON members(business_id);
 CREATE TABLE IF NOT EXISTS categories (
   slug TEXT PRIMARY KEY,
   name TEXT NOT NULL,
@@ -123,6 +128,50 @@ CREATE INDEX IF NOT EXISTS idx_rec_cust ON records(business_id, customer_id, cre
 /* ---- lightweight migrations for existing databases ---- */
 try { db.exec("ALTER TABLE businesses ADD COLUMN invoice_template TEXT NOT NULL DEFAULT 'classic'"); } catch (e) { /* column exists */ }
 try { db.exec("ALTER TABLE catalogue_items ADD COLUMN unit TEXT NOT NULL DEFAULT ''"); } catch (e) { /* column exists */ }
+
+/* sessions: rebuild around member_id (was user_id in the email-login era) */
+{
+  const cols = db.prepare("PRAGMA table_info(sessions)").all().map(c => c.name);
+  if (!cols.length || !cols.includes('member_id')) {
+    db.exec(`DROP TABLE IF EXISTS sessions;
+      CREATE TABLE sessions (
+        token_hash TEXT PRIMARY KEY,
+        member_id INTEGER NOT NULL REFERENCES members(id) ON DELETE CASCADE,
+        created_at INTEGER NOT NULL,
+        last_seen_at INTEGER NOT NULL
+      );`);
+  }
+}
+
+/* one-time migration from email accounts to business-name + code members.
+   Every migrated member gets temporary code 0000 and must change it at sign-in. */
+{
+  const crypto = require('crypto');
+  const sha = s => crypto.createHash('sha256').update(s).digest('hex');
+  const tempHash = () => {
+    const salt = crypto.randomBytes(8).toString('hex');
+    return salt + ':' + sha(salt + '0000');
+  };
+  const hasMembers = db.prepare('SELECT COUNT(*) n FROM members').get().n > 0;
+  const hasBiz = db.prepare('SELECT COUNT(*) n FROM businesses').get().n > 0;
+  const hasUsersTable = db.prepare("SELECT COUNT(*) n FROM sqlite_master WHERE type='table' AND name='users'").get().n > 0;
+  if (!hasMembers && hasBiz && hasUsersTable) {
+    const insM = db.prepare(`INSERT INTO members (business_id, label, code_hash, role, is_admin, must_change, created_at)
+      VALUES (?, ?, ?, ?, ?, 1, ?)`);
+    for (const b of db.prepare('SELECT * FROM businesses').all()) {
+      const owner = db.prepare('SELECT * FROM users WHERE id = ?').get(b.owner_user_id);
+      insM.run(b.id, (owner && owner.email) || 'Owner', tempHash(), 'owner', (owner && owner.is_admin) ? 1 : 0, Date.now());
+    }
+    const hasMships = db.prepare("SELECT COUNT(*) n FROM sqlite_master WHERE type='table' AND name='memberships'").get().n > 0;
+    if (hasMships) {
+      for (const m of db.prepare('SELECT * FROM memberships').all()) {
+        const u = db.prepare('SELECT * FROM users WHERE id = ?').get(m.user_id);
+        insM.run(m.business_id, (u && u.email) || 'Staff', tempHash(), 'staff', 0, Date.now());
+      }
+    }
+    console.log('Migrated email accounts to business-name + code sign-in. Everyone signs in with temporary code 0000 and will set a new code.');
+  }
+}
 
 /* ---- category presets: starter catalogue, modules, record templates ---- */
 const PRESETS = [
