@@ -2,7 +2,8 @@
 // GET  /api/catalog?promo=CODE → { promo } if the code exists (for the cart preview)
 // GET  /api/catalog + x-pin    → full catalogue incl. promo codes (admin)
 // POST /api/catalog + x-pin    → { op, ... } admin changes, see OPS below
-import { getCatalog, mutateCatalog, publicCatalog, applyStock } from '../lib/store.js';
+import crypto from 'node:crypto';
+import { getCatalog, mutateCatalog, publicCatalog, applyStock, shopperPromo } from '../lib/store.js';
 import { storageReady } from '../lib/blob.js';
 import { isAdmin, send, fail, httpError, jsonBody } from '../lib/http.js';
 
@@ -38,6 +39,22 @@ function cleanProduct(input, existing) {
     active: input.active !== false,
     createdAt: existing?.createdAt || Date.now(),
     updatedAt: Date.now()
+  };
+}
+
+function cleanPromo(promo = {}) {
+  return {
+    code: str(promo.code, 30).toUpperCase().replace(/[^A-Z0-9-]/g, ''),
+    type: ['percent', 'fixed', 'freeship'].includes(promo.type) ? promo.type : 'percent',
+    value: num(promo.value),
+    minSubtotal: num(promo.minSubtotal),
+    expires: str(promo.expires, 10),
+    maxUses: num(promo.maxUses),
+    onePerCustomer: Boolean(promo.onePerCustomer),
+    auto: Boolean(promo.auto),
+    label: str(promo.label, 60),
+    note: str(promo.note, 120),
+    active: promo.active !== false
   };
 }
 
@@ -78,17 +95,61 @@ const OPS = {
   },
   deleteBundle(c, { id }) { c.bundles = (c.bundles || []).filter(b => b.id !== id); },
   savePromo(c, { promo, previousCode }) {
-    const p = {
-      code: str(promo.code, 30).toUpperCase().replace(/\s+/g, ''),
-      type: ['percent', 'fixed', 'freeship'].includes(promo.type) ? promo.type : 'percent',
-      value: num(promo.value),
-      minSubtotal: num(promo.minSubtotal),
-      expires: str(promo.expires, 10),
-      active: promo.active !== false
-    };
+    const p = cleanPromo(promo);
     if (!p.code) throw httpError(400, 'Code is required');
-    c.promos = (c.promos || []).filter(x => x.code !== p.code && x.code !== previousCode);
+    const old = (c.promos || []).find(x => x.code === (previousCode || p.code));
+    if (c.promos.some(x => x.code === p.code && x !== old)) throw httpError(400, `${p.code} already exists`);
+    Object.assign(p, { used: old?.used || 0, usedBy: old?.usedBy || [], createdAt: old?.createdAt || Date.now() });
+    c.promos = c.promos.filter(x => x !== old);
     c.promos.push(p);
+  },
+  generatePromos(c, { template, count, prefix }) {
+    const n = Math.min(200, Math.max(1, num(count)));
+    const pre = str(prefix, 12).toUpperCase().replace(/[^A-Z0-9]/g, '') || 'FK';
+    const abc = 'ABCDEFGHJKMNPQRSTUVWXYZ23456789';
+    const have = new Set(c.promos.map(p => p.code));
+    const batch = `B${Date.now().toString(36).toUpperCase()}`;
+    const codes = [];
+    while (codes.length < n) {
+      let r = '';
+      for (let i = 0; i < 6; i++) r += abc[crypto.randomInt(abc.length)];
+      const code = `${pre}-${r}`;
+      if (have.has(code)) continue;
+      have.add(code);
+      codes.push(code);
+      c.promos.push({ ...cleanPromo({ ...template, code, auto: false }), used: 0, usedBy: [], batch, createdAt: Date.now() });
+    }
+    return { codes };
+  },
+  /** Invoice tool sales take stock too. Idempotent per invoice number: the
+   *  server remembers what each invoice took and only applies the difference. */
+  invoiceStock(c, { invoiceNo, lines }) {
+    const no = str(invoiceNo, 40);
+    if (!no) throw httpError(400, 'missing invoice number');
+    c.invoiceStock ||= {};
+    const key = l => `${l.productId}|${l.variantId}`;
+    const prev = new Map((c.invoiceStock[no]?.lines || []).map(l => [key(l), l.qty]));
+    const next = new Map();
+    for (const l of Array.isArray(lines) ? lines : []) {
+      const p = c.products.find(x => x.id === l.productId);
+      const v = p?.variants.find(x => x.id === l.variantId);
+      if (v) next.set(key(l), (next.get(key(l)) || 0) + num(l.qty));
+    }
+    const deltas = [];
+    for (const k of new Set([...prev.keys(), ...next.keys()])) {
+      const d = (prev.get(k) || 0) - (next.get(k) || 0); // positive = give back
+      if (d) { const [productId, variantId] = k.split('|'); deltas.push({ productId, variantId, delta: d }); }
+    }
+    // never block an invoice for a real sale: clamp at zero instead of failing
+    for (const d of deltas) {
+      const v = c.products.find(x => x.id === d.productId)?.variants.find(x => x.id === d.variantId);
+      if (v) v.stock = Math.max(0, (v.stock || 0) + d.delta);
+    }
+    if (next.size) c.invoiceStock[no] = { ts: Date.now(), lines: [...next].map(([k, qty]) => { const [productId, variantId] = k.split('|'); return { productId, variantId, qty }; }) };
+    else delete c.invoiceStock[no];
+    const keys = Object.keys(c.invoiceStock);
+    if (keys.length > 2000) keys.sort((a, b) => c.invoiceStock[a].ts - c.invoiceStock[b].ts).slice(0, keys.length - 2000).forEach(k => delete c.invoiceStock[k]);
+    return { applied: deltas.length };
   },
   deletePromo(c, { code }) { c.promos = (c.promos || []).filter(p => p.code !== code); },
   saveSettings(c, { settings }) {
@@ -100,6 +161,7 @@ const OPS = {
       lowStockAt: num(s.lowStockAt),
       whatsapp: str(s.whatsapp, 20).replace(/\D/g, ''),
       phoneDisplay: str(s.phoneDisplay, 30),
+      alertPhone: str(s.alertPhone, 20),
       instagram: str(s.instagram, 40).replace(/^@/, ''),
       bank: { name: str(s.bank?.name, 80), bank: str(s.bank?.bank, 60), number: str(s.bank?.number, 20) },
       zones: (s.zones || []).map(z => ({ id: str(z.id, 30) || slug(z.name), name: str(z.name, 80), fee: num(z.fee) })).filter(z => z.name)
@@ -115,8 +177,8 @@ export default async function handler(req, res) {
       const c = await getCatalog();
       if (req.query.promo) {
         const code = String(req.query.promo).trim().toUpperCase();
-        const promo = (c.promos || []).find(p => p.code === code && p.active !== false);
-        return send(res, 200, { promo: promo || null });
+        const promo = (c.promos || []).find(p => p.code === code && p.active !== false && !p.auto);
+        return send(res, 200, { promo: promo ? shopperPromo(promo) : null });
       }
       if (req.headers['x-pin']) {
         if (!isAdmin(req)) return send(res, 401, { error: 'wrong pin' });

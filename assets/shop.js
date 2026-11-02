@@ -1,5 +1,5 @@
 // FaasKids storefront — hash-routed single page app, no build step.
-import { fmt, priceCart, productStock, isOnSale, salePercent, activeBundles, bundleOffer, recommend, normalizePhone } from '../lib/pricing.js';
+import { fmt, priceCart, productStock, isOnSale, salePercent, activeBundles, bundleOffer, recommend, normalizePhone, comboMissing } from '../lib/pricing.js';
 
 const $ = (s, el = document) => el.querySelector(s);
 const $$ = (s, el = document) => [...el.querySelectorAll(s)];
@@ -40,7 +40,15 @@ async function fetchPromo(code) {
 }
 const product = id => catalog.products.find(p => p.id === id);
 const category = id => catalog.categories.find(c => c.id === id);
-const quote = (zoneId) => priceCart(catalog, bag, { promoCode, zoneId, promos: promoRule ? [promoRule] : [] });
+const quote = (zoneId) => priceCart(catalog, bag, { promoCode, zoneId, promos: [...(catalog.promos || []), ...(promoRule ? [promoRule] : [])] });
+const inBag = pid => bag.some(l => l.productId === pid);
+/** Combo state against the current bag: which items are still needed. */
+function comboState(b) {
+  const items = b.items.map(product).filter(Boolean);
+  const missing = new Set(comboMissing(catalog, bag, b));
+  return { items, missing, have: items.filter(p => !missing.has(p.id)) };
+}
+const comboBtnLabel = (st, total) => st.missing.size === total ? `Add all ${total}` : `Add ${st.missing.size} missing item${st.missing.size > 1 ? 's' : ''}`;
 
 /* ---------- small UI bits ---------- */
 function toast(msg) {
@@ -75,6 +83,9 @@ function stockNote(p, v) {
   if (s <= low) return `<span class="stock low">Only ${s} left</span>`;
   return '<span class="stock ok">In stock</span>';
 }
+let ratings = {}; // productId → { avg, count }
+const stars = (avg, cls = '') => `<span class="stars ${cls}" aria-label="${avg} out of 5 stars"><i style="width:${avg / 5 * 100}%"></i></span>`;
+const ratingHtml = id => ratings[id]?.count ? `<span class="rating">${stars(ratings[id].avg)} <small>${ratings[id].avg} (${ratings[id].count})</small></span>` : '';
 const heart = id => `<button class="heart ${saved.includes(id) ? 'on' : ''}" data-save="${esc(id)}" aria-label="Save item"><svg viewBox="0 0 24 24"><path d="M12 20s-7-4.4-7-10a4 4 0 0 1 7-2.6A4 4 0 0 1 19 10c0 5.6-7 10-7 10z"/></svg></button>`;
 
 function card(p) {
@@ -90,6 +101,7 @@ function card(p) {
     <a href="#/p/${esc(p.id)}" class="card-txt">
       <h3>${esc(p.name)}</h3>
       <div class="price">${priceHtml(p)}</div>
+      ${ratingHtml(p.id)}
       ${p.variants.length > 1 ? `<div class="sizes">${p.variants.length} sizes</div>` : ''}
     </a>
   </article>`;
@@ -173,7 +185,9 @@ function bagHtml(full = false) {
     ${hints}
     <div class="promo">
       <form id="promoForm"><input id="promoInput" placeholder="Promo code" value="${esc(promoCode)}" autocapitalize="characters"><button class="btn ghost">Apply</button></form>
-      ${q.promoError ? `<div class="err">${esc(q.promoError)}</div>` : q.promo ? `<div class="ok">✓ ${esc(q.promo.code)} applied <a href="#" data-clear-promo>remove</a></div>` : ''}
+      ${q.promoError ? `<div class="err">${esc(q.promoError)}</div>` : ''}
+      ${q.promo && !q.promo.auto ? `<div class="ok">✓ ${esc(q.promo.code)} applied <a href="#" data-clear-promo>remove</a></div>` : ''}
+      ${q.promo?.auto ? `<div class="ok">✓ ${esc(q.promo.label || 'Website discount')} applied automatically</div>` : ''}
     </div>
     ${summaryHtml(q)}
     <a class="btn block primary" href="#/checkout" ${q.errors.length ? 'aria-disabled="true"' : ''}>Checkout securely</a>
@@ -184,7 +198,7 @@ function summaryHtml(q, withDelivery = false) {
   return `<dl class="sum">
     <div><dt>Subtotal (${q.itemCount} item${q.itemCount === 1 ? '' : 's'})</dt><dd>${fmt(q.subtotal)}</dd></div>
     ${q.bundles.map(b => `<div class="save"><dt>🎁 ${esc(b.name)}${b.sets > 1 ? ' ×' + b.sets : ''}</dt><dd>−${fmt(b.saving)}</dd></div>`).join('')}
-    ${q.promo && q.promo.saving ? `<div class="save"><dt>Promo ${esc(q.promo.code)}</dt><dd>−${fmt(q.promo.saving)}</dd></div>` : ''}
+    ${q.promo && q.promo.saving ? `<div class="save"><dt>${q.promo.auto ? esc(q.promo.label || 'Website discount') : 'Promo ' + esc(q.promo.code)}</dt><dd>−${fmt(q.promo.saving)}</dd></div>` : ''}
     ${withDelivery ? `<div><dt>Delivery${q.zone ? ' · ' + esc(q.zone.name) : ''}</dt><dd>${q.zone ? (q.freeDelivery ? '<span class="free">FREE</span>' : fmt(q.deliveryFee)) : 'Choose below'}</dd></div>` : ''}
     <div class="tot"><dt>${withDelivery ? 'Total' : 'Total before delivery'}</dt><dd>${fmt(q.total)}</dd></div>
     ${q.totalSaving ? `<div class="saving-note">You’re saving ${fmt(q.totalSaving)} 🎉</div>` : ''}
@@ -192,6 +206,7 @@ function summaryHtml(q, withDelivery = false) {
 }
 
 function openBag() {
+  $('#toast').classList.remove('show');
   $('#drawerBody').innerHTML = bagHtml();
   $('#drawer').classList.add('open');
   $('#drawer').setAttribute('aria-hidden', 'false');
@@ -204,8 +219,11 @@ function closeBag() {
   $('#scrim').classList.remove('open');
   document.body.classList.remove('locked');
 }
-function refreshBagViews() {
+function refreshBagViews(full = false) {
   if ($('#drawer').classList.contains('open')) $('#drawerBody').innerHTML = bagHtml();
+  // combo & "bought together" blocks depend on what's in the bag
+  const page = (location.hash.slice(2) || '').split(/[/?]/)[0];
+  if (['p', 'combos', ''].includes(page)) { const y = scrollY; render(); scrollTo(0, y); }
   if (location.hash.startsWith('#/bag')) render();
   if (location.hash.startsWith('#/checkout')) render();
 }
@@ -254,18 +272,18 @@ function pageHome() {
 function combosHtml(list) {
   return `<div class="combos">${list.map(b => {
     const o = bundleOffer(catalog, b);
-    const items = b.items.map(product).filter(Boolean);
-    const needsSize = items.some(p => p.variants.length > 1);
-    const out = items.some(p => productStock(p) <= 0);
+    const st = comboState(b);
+    const needSize = st.items.find(p => st.missing.has(p.id) && p.variants.length > 1);
+    const out = st.items.some(p => st.missing.has(p.id) && productStock(p) <= 0);
     return `<div class="combo">
-      <div class="combo-imgs">${items.map(p => `<a href="#/p/${esc(p.id)}">${img(p)}</a>`).join('<span class="plus">+</span>')}</div>
+      <div class="combo-imgs">${st.items.map(p => `<a href="#/p/${esc(p.id)}" class="${st.missing.has(p.id) ? '' : 'have'}">${img(p)}${st.missing.has(p.id) ? '' : '<i class="have-tick">✓ In bag</i>'}</a>`).join('<span class="plus">+</span>')}</div>
       <div class="combo-txt">
         <h3>${esc(b.name)}</h3>
         ${b.description ? `<p>${esc(b.description)}</p>` : ''}
         <div class="price"><span class="now sale">${fmt(o.price)}</span> <s>${fmt(o.sum)}</s> <i class="tag sale">Save ${fmt(o.saving)}</i></div>
         ${out ? '<button class="btn" disabled>Part of this combo is sold out</button>'
-          : needsSize ? `<a class="btn primary" href="#/p/${esc(items.find(p => p.variants.length > 1).id)}">Choose sizes</a>`
-          : `<button class="btn primary" data-add-combo="${esc(b.id)}">Add combo to bag</button>`}
+          : needSize ? `<a class="btn primary" href="#/p/${esc(needSize.id)}">Choose sizes</a>`
+          : `<button class="btn primary" data-add-combo="${esc(b.id)}">${st.have.length ? comboBtnLabel(st, st.items.length) : 'Add combo to bag'}</button>`}
       </div>
     </div>`;
   }).join('')}</div>`;
@@ -360,6 +378,7 @@ function pageProduct(id) {
       <div class="buybox">
         <h1>${esc(p.name)}</h1>
         <div class="price big">${priceHtml(p)} ${isOnSale(p) ? `<i class="tag sale">Save ${salePercent(p)}%</i>` : ''}</div>
+        ${ratings[p.id]?.count ? `<a href="#reviews" class="rating-link" data-scroll="reviews">${ratingHtml(p.id)}</a>` : ''}
         ${multi ? `<div class="opt"><div class="opt-hd"><b>Size</b><span id="sizeSel">${v ? esc(v.label) : 'Please select'}</span></div>
           <div class="sizes-pick">${p.variants.map(x => `<button data-variant="${esc(x.id)}" class="${x.id === pdpState.variantId ? 'on' : ''}" ${x.stock <= 0 ? 'disabled' : ''}>${esc(x.label)}</button>`).join('')}</div></div>` : ''}
         <div id="stockLine">${stockNote(p, v || (multi ? null : p.variants[0]))}</div>
@@ -373,6 +392,7 @@ function pageProduct(id) {
       </div>
     </div>
     ${fbt.length ? fbtHtml(p, fbt) : ''}
+    <section class="reviews" id="reviews"></section>
   </section>
   ${(() => { const more = visible().filter(x => x.category === p.category && x.id !== id).slice(0, 4); return more.length ? `<section class="sec"><div class="sec-hd"><h2>More ${esc(c?.name || '')}</h2></div>${grid(more)}</section>` : ''; })()}
   ${recentHtml(id)}`;
@@ -380,29 +400,33 @@ function pageProduct(id) {
 
 function comboBlock(b, currentId) {
   const o = bundleOffer(catalog, b);
-  const items = b.items.map(product).filter(Boolean);
+  const st = comboState(b);
   return `<div class="combo-box" data-combo="${esc(b.id)}">
     <div class="combo-box-hd"><b>🎁 ${esc(b.name)}</b><i class="tag sale">Save ${fmt(o.saving)}</i></div>
     ${b.description ? `<p class="muted">${esc(b.description)}</p>` : ''}
-    <ul>${items.map(p => `<li>
+    <ul>${st.items.map(p => {
+      const need = st.missing.has(p.id);
+      return `<li class="${need ? '' : 'have'}">
       <span class="mini">${img(p)}</span>
-      <span class="nm">${p.id === currentId ? '<b>This item:</b> ' : ''}${esc(p.name)}</span>
-      ${p.variants.length > 1 ? `<select data-combo-variant="${esc(p.id)}" aria-label="Size for ${esc(p.name)}"><option value="">Size</option>${p.variants.map(v => `<option value="${esc(v.id)}" ${v.stock <= 0 ? 'disabled' : ''}>${esc(v.label)}${v.stock <= 0 ? ' (sold out)' : ''}</option>`).join('')}</select>` : ''}
+      <span class="nm">${p.id === currentId ? '<b>This item:</b> ' : ''}${esc(p.name)}${need ? '' : '<small class="ok-txt">✓ Already in your bag</small>'}</span>
+      ${need && p.variants.length > 1 ? `<select data-combo-variant="${esc(p.id)}" aria-label="Size for ${esc(p.name)}"><option value="">Size</option>${p.variants.map(v => `<option value="${esc(v.id)}" ${v.stock <= 0 ? 'disabled' : ''} ${p.id === pdpState.id && v.id === pdpState.variantId ? 'selected' : ''}>${esc(v.label)}${v.stock <= 0 ? ' (sold out)' : ''}</option>`).join('')}</select>` : ''}
       <span class="pr">${fmt(p.price)}</span>
-    </li>`).join('')}</ul>
-    <div class="combo-box-ft"><span>Combo price <b>${fmt(o.price)}</b> <s>${fmt(o.sum)}</s></span><button class="btn primary sm" data-add-combo="${esc(b.id)}">Add all ${items.length}</button></div>
+    </li>`;
+    }).join('')}</ul>
+    <div class="combo-box-ft"><span>Combo price <b>${fmt(o.price)}</b> <s>${fmt(o.sum)}</s></span><button class="btn primary sm" data-add-combo="${esc(b.id)}">${comboBtnLabel(st, st.items.length)}</button></div>
   </div>`;
 }
 
 function fbtHtml(p, recs) {
   const all = [p, ...recs];
+  const pick = all.filter(x => !inBag(x.id));
   return `<section class="fbt" id="fbt">
     <h2>Frequently bought together</h2>
     <div class="fbt-row">
       <div class="fbt-imgs">${all.map(x => `<a href="#/p/${esc(x.id)}">${img(x)}</a>`).join('<span class="plus">+</span>')}</div>
       <div class="fbt-list">
-        ${all.map((x, i) => `<label><input type="checkbox" data-fbt="${esc(x.id)}" data-price="${x.price}" checked> ${i ? '' : '<b>This item:</b> '}${esc(x.name)} <span class="pr">${fmt(x.price)}</span>${x.variants.length > 1 ? ' <span class="muted">(choose size)</span>' : ''}</label>`).join('')}
-        <div class="fbt-ft"><span>Total: <b id="fbtTotal">${fmt(all.reduce((s, x) => s + x.price, 0))}</b></span><button class="btn primary sm" id="fbtAdd">Add selected to bag</button></div>
+        ${all.map((x, i) => `<label><input type="checkbox" data-fbt="${esc(x.id)}" data-price="${x.price}" ${inBag(x.id) ? '' : 'checked'}> ${i ? '' : '<b>This item:</b> '}${esc(x.name)} <span class="pr">${fmt(x.price)}</span>${inBag(x.id) ? ' <small class="ok-txt">✓ in your bag</small>' : x.variants.length > 1 ? ' <span class="muted">(choose size)</span>' : ''}</label>`).join('')}
+        <div class="fbt-ft"><span>Total: <b id="fbtTotal">${fmt(pick.reduce((s, x) => s + x.price, 0))}</b></span><button class="btn primary sm" id="fbtAdd">Add selected to bag</button></div>
       </div>
     </div>
   </section>`;
@@ -441,7 +465,8 @@ function pageCheckout() {
           <label class="fld"><span>Note for us (optional)</span><textarea name="note" rows="2" placeholder="e.g. Gift wrap please, deliver after 4pm">${esc(checkout.note || '')}</textarea></label>
         </fieldset>
         <fieldset><legend>3. Payment</legend>
-          <div class="pay-opt on"><b>🏦 Bank transfer</b><span>After you place your order we’ll show the account details. Your items are reserved for you.</span></div>
+          ${catalog.settings.cardPayments ? `<label class="pay-opt ${checkout.payment === 'card' ? 'on' : ''}"><input type="radio" name="payment" value="card" ${checkout.payment === 'card' ? 'checked' : ''}><b>💳 Card, USSD or bank app</b><span>Pay securely with Paystack. Needs your email for the receipt.</span></label>` : ''}
+          <label class="pay-opt ${checkout.payment !== 'card' || !catalog.settings.cardPayments ? 'on' : ''}"><input type="radio" name="payment" value="transfer" ${checkout.payment !== 'card' || !catalog.settings.cardPayments ? 'checked' : ''}><b>🏦 Bank transfer</b><span>After you place your order we’ll show the account details. Your items are reserved for you.</span></label>
         </fieldset>
         <div class="err" id="coErr" role="alert"></div>
         <button class="btn primary block big" id="placeBtn">Place order · ${fmt(q.total)}</button>
@@ -461,8 +486,11 @@ function pageOrderDone(no) {
   if (!last || last.order.no !== no) return `<section class="sec narrow"><h1>Order ${esc(no)}</h1><p>Track this order any time from <a href="#/track">My orders</a>.</p></section>`;
   const { order, bank, whatsapp } = last;
   const msg = `Hello FaasKids 👋 I just placed order *${order.no}* (${fmt(order.total)}). Here is my payment proof:`;
+  const paid = order.status && order.status !== 'pending';
   return `<section class="sec narrow done">
-    <div class="done-hd"><div class="emoji-xl">🎉</div><h1>Thank you, ${esc(order.customer.name.split(' ')[0])}!</h1><p>Your order <b>${esc(order.no)}</b> is reserved. Complete payment to confirm it.</p></div>
+    <div class="done-hd"><div class="emoji-xl">🎉</div><h1>Thank you, ${esc(order.customer.name.split(' ')[0])}!</h1><p>${paid ? `Payment received — order <b>${esc(order.no)}</b> is confirmed. We’ll text you when it ships.` : `Your order <b>${esc(order.no)}</b> is reserved. Complete payment to confirm it.`}</p></div>
+    ${paid ? '<div class="paybox paid"><h2>✅ Paid</h2><p class="muted">Thank you! A receipt is on its way to your email.</p></div>' : `
+    ${last.payUrl ? `<a class="btn primary block big" href="${esc(last.payUrl)}">💳 Pay ${fmt(order.total)} by card</a><p class="tiny center">or pay by bank transfer:</p>` : ''}
     <div class="paybox">
       <h2>Pay ${fmt(order.total)} by bank transfer</h2>
       <dl>
@@ -472,10 +500,10 @@ function pageOrderDone(no) {
         <div><dt>Reference</dt><dd>${esc(order.no)} <button class="btn sm ghost" data-copy="${esc(order.no)}">Copy</button></dd></div>
       </dl>
       <a class="btn block wa" target="_blank" rel="noopener" href="https://wa.me/${esc(whatsapp)}?text=${encodeURIComponent(msg)}">📲 Send payment proof on WhatsApp</a>
-    </div>
+    </div>`}
     <div class="recap">${order.lines.map(l => `<div><span>${esc(l.name)}${l.variantLabel ? ' · ' + esc(l.variantLabel) : ''} ×${l.qty}</span><b>${fmt(l.amount)}</b></div>`).join('')}
       ${order.bundleSaving ? `<div class="save"><span>Combo savings</span><b>−${fmt(order.bundleSaving)}</b></div>` : ''}
-      ${order.promo?.saving ? `<div class="save"><span>Promo ${esc(order.promo.code)}</span><b>−${fmt(order.promo.saving)}</b></div>` : ''}
+      ${order.promo?.saving ? `<div class="save"><span>${order.promo.auto ? esc(order.promo.label || 'Website discount') : 'Promo ' + esc(order.promo.code)}</span><b>−${fmt(order.promo.saving)}</b></div>` : ''}
       <div><span>Delivery · ${esc(order.zone?.name)}</span><b>${order.deliveryFee ? fmt(order.deliveryFee) : 'FREE'}</b></div>
       <div class="tot"><span>Total</span><b>${fmt(order.total)}</b></div></div>
     <p class="muted">Track it any time at <a href="#/track">My orders</a> using your phone number <b>${esc(order.customer.phoneRaw)}</b> — we’ll text you a one-time code.</p>
@@ -523,7 +551,7 @@ function orderCard(o) {
     <div class="ocard-hd"><div><b>${esc(o.no)}</b><span class="muted"> · ${new Date(o.ts).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}</span></div><span class="st st-${esc(o.status)}">${icon} ${label}</span></div>
     ${o.status !== 'cancelled' ? `<ol class="steps">${FLOW.map((s, i) => `<li class="${i <= at ? 'on' : ''}">${STATUS[s][0]}</li>`).join('')}</ol>` : ''}
     ${o.tracking ? `<p class="tiny">Tracking: <b>${esc(o.tracking)}</b></p>` : ''}
-    <div class="recap">${o.lines.map(l => `<div><span>${esc(l.name)}${l.variantLabel ? ' · ' + esc(l.variantLabel) : ''} ×${l.qty}</span><b>${fmt(l.amount)}</b></div>`).join('')}<div class="tot"><span>Total</span><b>${fmt(o.total)}</b></div></div>
+    <div class="recap">${o.lines.map(l => `<div><span>${esc(l.name)}${l.variantLabel ? ' · ' + esc(l.variantLabel) : ''} ×${l.qty}${track.canReview?.includes(l.productId) ? ` <button class="rate-btn" data-rate="${esc(l.productId)}">★ Rate it</button>` : track.reviewed?.includes(l.productId) ? ' <small class="ok-txt">✓ Reviewed</small>' : ''}</span><b>${fmt(l.amount)}</b></div>`).join('')}<div class="tot"><span>Total</span><b>${fmt(o.total)}</b></div></div>
     ${o.status === 'pending' ? `<p class="tiny">Awaiting your transfer to ${esc(catalog.settings.bank?.bank)} ${esc(catalog.settings.bank?.number)} — reference ${esc(o.no)}.</p>` : ''}
   </article>`;
 }
@@ -533,6 +561,9 @@ async function loadMyOrders() {
     const r = await fetch('/api/account', { headers: { Authorization: 'Bearer ' + session.token } });
     if (r.status === 401) { store.set('session', null); track = { step: 'phone' }; return render(); }
     track.orders = (await r.json()).orders || [];
+    const rv = await fetch('/api/reviews?mine=1', { headers: { Authorization: 'Bearer ' + session.token } }).then(x => x.json()).catch(() => ({}));
+    track.canReview = rv.canReview || [];
+    track.reviewed = rv.reviewed || [];
   } catch { track.orders = []; }
   if (location.hash.startsWith('#/track')) render();
 }
@@ -541,6 +572,36 @@ async function otpCall(body) {
   const data = await r.json().catch(() => ({}));
   if (!r.ok) throw new Error(data.error || 'Something went wrong');
   return data;
+}
+
+function openRateForm(productId, anchor) {
+  $('.rate-form')?.remove();
+  const p = product(productId);
+  const f = document.createElement('form');
+  f.className = 'rate-form';
+  f.innerHTML = `<b>Rate ${esc(p?.name || 'this item')}</b>
+    <div class="star-pick">${[5, 4, 3, 2, 1].map(n => `<input type="radio" name="rating" value="${n}" id="st${n}"><label for="st${n}" title="${n} stars">★</label>`).join('')}</div>
+    <textarea name="text" rows="2" maxlength="1000" placeholder="What did you and your little one think?"></textarea>
+    <input name="name" maxlength="40" placeholder="Your first name (shown with the review)" value="${esc((checkout.name || '').split(' ')[0])}">
+    <div class="err" role="alert"></div>
+    <button class="btn primary sm">Post review</button>`;
+  anchor.closest('.ocard').appendChild(f);
+  f.addEventListener('submit', async ev => {
+    ev.preventDefault();
+    const d = Object.fromEntries(new FormData(f));
+    if (!d.rating) return ($('.err', f).textContent = 'Tap the stars to rate');
+    const r = await fetch('/api/reviews', { method: 'POST', headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + store.get('session', {}).token }, body: JSON.stringify({ productId, ...d }) });
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) return ($('.err', f).textContent = data.error || 'Could not post');
+    track.canReview = track.canReview.filter(x => x !== productId);
+    track.reviewed = [...(track.reviewed || []), productId];
+    toast('Thank you for your review! 💛');
+    loadRatings();
+    render();
+  });
+}
+async function loadRatings() {
+  try { ratings = (await fetch('/api/reviews').then(r => r.json())).summary || {}; } catch {}
 }
 
 function pageNotFound() {
@@ -589,8 +650,20 @@ function afterRender(page) {
 }
 
 /* ---------- page wiring ---------- */
+async function loadReviews(id) {
+  const box = $('#reviews');
+  if (!box) return;
+  const data = await fetch('/api/reviews?product=' + encodeURIComponent(id)).then(r => r.json()).catch(() => ({}));
+  const list = data.reviews || [];
+  if (!list.length || pdpState.id !== id || !$('#reviews')) { if ($('#reviews')) $('#reviews').innerHTML = ''; return; }
+  const avg = Math.round(list.reduce((s, r) => s + r.rating, 0) / list.length * 10) / 10;
+  $('#reviews').innerHTML = `<h2>Reviews</h2>
+    <div class="rv-sum">${stars(avg, 'big')} <b>${avg}</b> <span class="muted">from ${list.length} verified buyer${list.length > 1 ? 's' : ''}</span></div>
+    ${list.slice(0, 20).map(r => `<article class="rv">${stars(r.rating)}<p>${esc(r.text)}</p><small class="muted">${esc(r.name)} · ✓ Verified purchase · ${new Date(r.ts).toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })}</small></article>`).join('')}`;
+}
 function wirePdp() {
   const p = product(pdpState.id);
+  loadReviews(p.id);
   const qtyEl = $('#pdpQty span');
   const gMain = $('#gMain');
   const syncStock = () => {
@@ -631,6 +704,7 @@ function wirePdp() {
   $$('[data-fbt]').forEach(c => c.addEventListener('change', fbtTotal));
   $('#fbtAdd')?.addEventListener('click', () => {
     const picks = $$('[data-fbt]:checked').map(c => product(c.dataset.fbt));
+    if (!picks.length) { toast('Tick the items you’d like to add'); return; }
     const needSize = picks.find(x => x.variants.length > 1 && !(x.id === p.id && pdpState.variantId));
     if (needSize) { toast(`Choose a size for <b>${esc(needSize.name)}</b> first`); if (needSize.id !== p.id) location.hash = '#/p/' + needSize.id; return; }
     let n = 0;
@@ -643,24 +717,31 @@ function addCombo(id, root = document) {
   const b = (catalog.bundles || []).find(x => x.id === id);
   if (!b) return;
   const box = root.querySelector?.(`[data-combo="${CSS.escape(id)}"]`);
+  // Only add what's missing: items already in the bag (and not already used by
+  // another combo) count towards this one, and nothing else in the bag changes.
+  const st = comboState(b);
   const picks = [];
-  for (const pid of b.items) {
-    const p = product(pid);
+  for (const p of st.items.filter(x => st.missing.has(x.id))) {
     let vid = p.variants.length === 1 ? p.variants[0].id : null;
-    if (!vid && pid === pdpState.id && pdpState.variantId) vid = pdpState.variantId;
-    const sel = box?.querySelector(`[data-combo-variant="${CSS.escape(pid)}"]`);
+    const sel = box?.querySelector(`[data-combo-variant="${CSS.escape(p.id)}"]`);
     if (!vid && sel?.value) vid = sel.value;
-    if (!vid) { sel?.classList.add('need'); sel?.focus(); toast(`Choose a size for <b>${esc(p.name)}</b>`); return; }
-    picks.push([pid, vid]);
+    if (!vid && p.id === pdpState.id && pdpState.variantId) vid = pdpState.variantId;
+    if (!vid) {
+      if (sel) { sel.classList.add('need'); sel.focus(); toast(`Choose a size for <b>${esc(p.name)}</b>`); }
+      else { toast(`Choose a size for <b>${esc(p.name)}</b>`); location.hash = '#/p/' + p.id; }
+      return;
+    }
+    picks.push([p.id, vid]);
   }
   for (const [pid, vid] of picks) {
     const v = product(pid).variants.find(x => x.id === vid);
-    const inBag = bag.find(l => l.productId === pid && l.variantId === vid)?.qty || 0;
-    if (inBag + 1 > v.stock) { toast(`Sorry — not enough <b>${esc(product(pid).name)}</b> in stock`); return; }
+    const have = bag.find(l => l.productId === pid && l.variantId === vid)?.qty || 0;
+    if (have + 1 > v.stock) { toast(`Sorry — not enough <b>${esc(product(pid).name)}</b> in stock`); return; }
   }
   picks.forEach(([pid, vid]) => addToBag(pid, vid, 1, true));
-  toast(`🎁 ${esc(b.name)} added — discount applied! <a href="#" data-open-bag>View bag</a>`);
-  refreshBagViews();
+  const kept = st.have.length;
+  toast(`🎁 ${esc(b.name)} complete${kept ? ` — used the ${kept === 1 ? esc(st.have[0].name) : kept + ' items'} already in your bag` : ''}. Discount applied! <a href="#" data-open-bag>View bag</a>`);
+  refreshBagViews(true);
 }
 
 function wireCheckout() {
@@ -671,7 +752,7 @@ function wireCheckout() {
     store.set('checkout', checkout);
   };
   form.addEventListener('input', persist);
-  $$('input[name=zoneId]', form).forEach(r => r.addEventListener('change', () => { persist(); render(); }));
+  $$('input[name=zoneId], input[name=payment]', form).forEach(r => r.addEventListener('change', () => { persist(); render(); }));
   form.addEventListener('submit', async e => {
     e.preventDefault();
     persist();
@@ -681,6 +762,8 @@ function wireCheckout() {
     if (normalizePhone(checkout.phone).length < 10) return (err.textContent = 'Please enter a valid phone number');
     if (!checkout.zoneId) return (err.textContent = 'Please choose a delivery option');
     if (checkout.zoneId !== 'pickup' && !checkout.address.trim()) return (err.textContent = 'Please enter your delivery address');
+    const payment = catalog.settings.cardPayments && checkout.payment === 'card' ? 'card' : 'transfer';
+    if (payment === 'card' && !/^\S+@\S+\.\S+$/.test(checkout.email || '')) return (err.textContent = 'Please enter your email for the card receipt');
     const btn = $('#placeBtn');
     btn.disabled = true;
     btn.textContent = 'Placing your order…';
@@ -689,7 +772,7 @@ function wireCheckout() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          lines: bag, promoCode, zoneId: checkout.zoneId,
+          lines: bag, promoCode, zoneId: checkout.zoneId, payment,
           customer: { ...checkout, address: checkout.zoneId === 'pickup' ? '' : checkout.address, state: checkout.zoneId === 'pickup' ? '' : checkout.state }
         })
       });
@@ -703,6 +786,7 @@ function wireCheckout() {
       promoCode = ''; promoRule = null; store.set('promo', '');
       track.orders = null;
       loadCatalog().catch(() => {});
+      if (data.payUrl) { location.href = data.payUrl; return; } // off to Paystack
       location.hash = '#/order/' + data.order.no;
     } catch (ex) {
       err.textContent = ex.message;
@@ -738,6 +822,8 @@ function wireTrack() {
 
 /* ---------- global delegated events ---------- */
 document.addEventListener('click', async e => {
+  const rate = e.target.closest('[data-rate]');
+  if (rate) { openRateForm(rate.dataset.rate, rate); return; }
   const t = e.target.closest('[data-save],[data-open-bag],[data-add],[data-add-combo],[data-remove],[data-line] button,[data-clear-promo],[data-copy]');
   if (!t) return;
   if (t.dataset.save) { e.preventDefault(); toggleSaved(t.dataset.save); }
@@ -783,8 +869,11 @@ window.addEventListener('storage', e => { if (e.key === 'fk-bag') { bag = store.
 /* ---------- chrome ---------- */
 function renderChrome() {
   const s = catalog.settings;
-  $('#announce').textContent = s.announcement || '';
-  $('#announce').hidden = !s.announcement;
+  const auto = (catalog.promos || []).filter(p => p.auto).sort((a, b) => (b.value || 0) - (a.value || 0))[0];
+  const autoTxt = auto ? `🎉 ${auto.type === 'percent' ? auto.value + '% off' : auto.type === 'fixed' ? fmt(auto.value) + ' off' : 'Free delivery on'} every website order${auto.minSubtotal ? ' over ' + fmt(auto.minSubtotal) : ''} — no code needed` : '';
+  const ann = [autoTxt, s.announcement].filter(Boolean).join(' · ');
+  $('#announce').textContent = ann;
+  $('#announce').hidden = !ann;
   const hasSale = visible().some(isOnSale);
   $('#catnav').innerHTML = `<a href="#/all">All</a>` +
     catalog.categories.map(c => `<a href="#/c/${esc(c.id)}">${esc(c.name)}</a>`).join('') +
@@ -796,6 +885,21 @@ function renderChrome() {
     <div><h4>Help</h4><a href="#/track">Track my orders</a><a href="#/combos">Combo deals</a>${s.whatsapp ? `<a href="https://wa.me/${esc(s.whatsapp)}" target="_blank" rel="noopener">WhatsApp us</a>` : ''}</div>
     <div><h4>Contact</h4>${s.phoneDisplay ? `<span>📞 ${esc(s.phoneDisplay)}</span>` : ''}${s.instagram ? `<a href="https://instagram.com/${esc(s.instagram)}" target="_blank" rel="noopener">@${esc(s.instagram)}</a>` : ''}<span>Nationwide delivery</span></div>
   </div><p class="copy">© ${new Date().getFullYear()} FaasKids · <a href="admin.html">Staff</a></p>`;
+}
+
+/* ---------- back from Paystack: /shop.html?paid=FK-…&reference=… ---------- */
+async function returnFromPaystack() {
+  const qs = new URLSearchParams(location.search);
+  const no = qs.get('paid');
+  if (!no) return;
+  history.replaceState(null, '', location.pathname + '#/order/' + encodeURIComponent(no));
+  try {
+    const r = await fetch('/api/paystack?reference=' + encodeURIComponent(qs.get('reference') || no));
+    const data = await r.json();
+    const last = store.get('lastOrder', null);
+    if (last?.order?.no === no && data.status) { last.order.status = data.status; store.set('lastOrder', last); }
+    if (data.status === 'paid') toast('✅ Payment received — thank you!');
+  } catch {}
 }
 
 /* ---------- boot ---------- */
@@ -810,6 +914,8 @@ function renderChrome() {
   }
   saveBag();
   renderChrome();
+  await returnFromPaystack();
+  loadRatings().then(() => { if (Object.keys(ratings).length) render(); });
   lastPath = location.hash.split('?')[0];
   render();
 })();

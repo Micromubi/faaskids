@@ -6,6 +6,8 @@ import { getCatalog, mutateCatalog, applyStock, createOrder, mutateOrder, getOrd
 import { storageReady } from '../lib/blob.js';
 import { priceCart, normalizePhone } from '../lib/pricing.js';
 import { isAdmin, send, fail, httpError, jsonBody } from '../lib/http.js';
+import { paystackReady, initPayment } from '../lib/paystack.js';
+import { notifyOwner } from '../lib/orders.js';
 
 export const STATUSES = ['pending', 'paid', 'packed', 'shipped', 'delivered', 'cancelled'];
 const HOLDS_STOCK = s => s !== 'cancelled';
@@ -24,17 +26,26 @@ async function placeOrder(body) {
   };
   if (!customer.name) throw httpError(400, 'Please enter your name');
   if (customer.phone.length < 10) throw httpError(400, 'Please enter a valid phone number');
+  const method = body.payment === 'card' ? 'card' : 'transfer';
+  if (method === 'card' && !paystackReady()) throw httpError(400, 'Card payment isn’t available yet — please choose bank transfer');
+  if (method === 'card' && !/^\S+@\S+\.\S+$/.test(customer.email)) throw httpError(400, 'Please enter your email for the card receipt');
   const lines = (Array.isArray(body.lines) ? body.lines : []).slice(0, 50);
   if (!lines.length) throw httpError(400, 'Your bag is empty');
 
   let quote;
   // Price + reserve stock in one compare-and-swap on the catalogue.
   await mutateCatalog(c => {
-    quote = priceCart(c, lines, { promoCode: body.promoCode, zoneId: body.zoneId, promos: c.promos });
+    quote = priceCart(c, lines, { promoCode: body.promoCode, zoneId: body.zoneId, promos: c.promos, phone: customer.phone });
     if (!quote.lines.length) throw httpError(400, 'Those items are no longer available');
     if (quote.errors.length) throw httpError(409, quote.errors.join(' · '), { quote });
     if (!quote.zone) throw httpError(400, 'Please choose a delivery option');
     if (quote.zone.id !== 'pickup' && !customer.address) throw httpError(400, 'Please enter a delivery address');
+    // a code the shopper typed that can't be used → tell them (don't silently swap discounts)
+    if (body.promoCode && quote.promoError && !/bigger/.test(quote.promoError)) throw httpError(400, quote.promoError + ' — remove it in your bag to continue');
+    if (quote.promo) {
+      const pr = c.promos.find(x => x.code === quote.promo.code);
+      if (pr) { pr.used = (pr.used || 0) + 1; pr.usedBy = [...(pr.usedBy || []), customer.phone].slice(-5000); }
+    }
     applyStock(c, quote.lines.map(l => ({ productId: l.productId, variantId: l.variantId, delta: -l.qty })));
     // learn what sells together → powers "Frequently bought together"
     const ids = [...new Set(quote.lines.map(l => l.productId))].sort();
@@ -60,16 +71,18 @@ async function placeOrder(body) {
     promo: quote.promo,
     deliveryFee: quote.deliveryFee,
     total: quote.total,
-    payment: { method: 'transfer' }
+    payment: { method }
   };
   for (let i = 0; i < 5; i++) {
     order.no = newOrderNo();
-    try { return await createOrder(order); } catch (e) { if (i === 4) {
+    try { await createOrder(order); break; } catch (e) { if (i === 4) {
       // couldn't save — give the stock back
       await mutateCatalog(c => applyStock(c, order.lines.map(l => ({ productId: l.productId, variantId: l.variantId, delta: l.qty })))).catch(() => {});
       throw e;
     } }
   }
+  await Promise.race([notifyOwner(order, 'new').catch(() => {}), new Promise(r => setTimeout(r, 3000))]);
+  return order;
 }
 
 async function updateOrder(body) {
@@ -94,6 +107,18 @@ async function updateOrder(body) {
     return o;
   });
   if (restock === 1) await moveStock(1);
+  if (restock && before.promo) {
+    // a cancelled order gives its coupon use back (and takes it again if re-opened)
+    await mutateCatalog(c => {
+      const pr = (c.promos || []).find(x => x.code === before.promo.code);
+      if (pr) {
+        pr.used = Math.max(0, (pr.used || 0) - restock);
+        if (restock === 1) { const i = (pr.usedBy || []).lastIndexOf(before.customer.phone); if (i >= 0) pr.usedBy.splice(i, 1); }
+        else pr.usedBy = [...(pr.usedBy || []), before.customer.phone];
+      }
+      return c;
+    }).catch(() => {});
+  }
   return order;
 }
 
@@ -102,9 +127,18 @@ export default async function handler(req, res) {
     if (!storageReady()) throw httpError(503, 'storage not set up');
 
     if (req.method === 'POST') {
-      const order = await placeOrder(jsonBody(req));
+      const body = jsonBody(req);
+      const order = await placeOrder(body);
       const c = await getCatalog();
-      return send(res, 200, { ok: true, order, bank: c.settings.bank, whatsapp: c.settings.whatsapp });
+      let payUrl = null;
+      if (order.payment.method === 'card') {
+        const origin = `https://${req.headers['x-forwarded-host'] || req.headers.host}`;
+        try {
+          const p = await initPayment({ email: order.customer.email, amount: order.total, reference: order.no, callbackUrl: `${origin}/shop.html?paid=${order.no}`, metadata: { order: order.no, phone: order.customer.phoneRaw } });
+          payUrl = p.authorization_url;
+        } catch (e) { /* order still stands — customer can pay by transfer */ }
+      }
+      return send(res, 200, { ok: true, order, payUrl, bank: c.settings.bank, whatsapp: c.settings.whatsapp });
     }
 
     if (!isAdmin(req)) return send(res, 401, { error: 'wrong pin' });

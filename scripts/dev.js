@@ -21,6 +21,7 @@ http.createServer(async (req, res) => {
       const raw = Buffer.concat(chunks);
       const ct = req.headers['content-type'] || '';
       req.query = Object.fromEntries(url.searchParams);
+      req.rawBody = raw;
       req.body = ct.includes('json') ? (raw.length ? JSON.parse(raw) : {}) : raw;
       res.status = c => { res.statusCode = c; return res; };
       res.json = o => { res.setHeader('Content-Type', 'application/json'); res.end(JSON.stringify(o)); return res; };

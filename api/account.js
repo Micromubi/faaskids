@@ -11,6 +11,7 @@ import crypto from 'node:crypto';
 import { readJSON, writeJSON, remove, storageReady } from '../lib/blob.js';
 import { listOrders } from '../lib/store.js';
 import { normalizePhone } from '../lib/pricing.js';
+import { sendSms as termii } from '../lib/sms.js';
 import { send, fail, httpError, jsonBody, makeSession, readSession, hash, hmac } from '../lib/http.js';
 
 const OTP_TTL = 10 * 60e3;
@@ -18,22 +19,6 @@ const RESEND_AFTER = 45e3;
 const MAX_TRIES = 5;
 const otpPath = phone => `store/otp/${hash(phone).slice(0, 32)}.json`;
 const testMode = () => !process.env.TERMII_API_KEY;
-
-async function sendSms(phone, text) {
-  const r = await fetch('https://api.ng.termii.com/api/sms/send', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      api_key: process.env.TERMII_API_KEY,
-      to: phone,
-      from: process.env.TERMII_SENDER_ID || 'FaasKids',
-      sms: text,
-      type: 'plain',
-      channel: process.env.TERMII_CHANNEL || 'dnd' // 'dnd' reaches numbers on DND; 'generic' is cheaper
-    })
-  });
-  if (!r.ok) throw httpError(502, 'Could not send the code right now — please try again shortly.');
-}
 
 const ordersFor = async phone => (await listOrders()).filter(o => o.customer?.phone === phone);
 
@@ -63,7 +48,7 @@ export default async function handler(req, res) {
       const known = (await ordersFor(phone)).length > 0;
       const code = String(crypto.randomInt(0, 1e6)).padStart(6, '0');
       await writeJSON(otpPath(phone), { h: hmac(`${phone}:${code}`), exp: Date.now() + OTP_TTL, tries: 0, sentAt: Date.now() }, etag);
-      if (known && !testMode()) await sendSms(phone, `Your FaasKids code is ${code}. It expires in 10 minutes. Don't share it with anyone.`);
+      if (known && !testMode()) await termii(phone, `Your FaasKids code is ${code}. It expires in 10 minutes. Don't share it with anyone.`).catch(() => { throw httpError(502, 'Could not send the code right now — please try again shortly.'); });
       return send(res, 200, {
         ok: true,
         message: 'If this number has FaasKids orders, a 6-digit code is on its way by SMS.',

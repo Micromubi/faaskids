@@ -346,3 +346,41 @@ legend { font-family: 'Baloo 2', sans-serif; font-weight: 800; font-size: 20px; 
 .toast.show { opacity: 1; transform: translate(-50%, 0); pointer-events: auto; }
 .toast a { color: var(--yellow); }
 :focus-visible { outline: 3px solid var(--teal); outline-offset: 2px; }
+
+/* ---------- combos: items already in the bag ---------- */
+.combo-imgs a { position: relative; }
+.have-tick { position: absolute; left: 6px; bottom: 6px; font-style: normal; font-size: 11px; font-weight: 800; background: var(--ok); color: #fff; border-radius: 999px; padding: 2px 8px; }
+.combo-box li.have { outline: 2px solid #bfe6d2; }
+.ok-txt { display: block; color: var(--ok); font-weight: 800; font-size: 12px; }
+.fbt-list .ok-txt { display: inline; }
+
+/* ---------- payment options ---------- */
+.pay-opt { cursor: pointer; margin-bottom: 8px; border-color: var(--line); background: #fff; position: relative; padding-left: 46px; }
+.pay-opt.on { border-color: var(--ink); background: var(--surface-2); }
+.pay-opt input { position: absolute; left: 14px; top: 16px; width: 20px; height: 20px; accent-color: var(--ink); }
+.paybox.paid { border-color: var(--ok); background: #eef8f2; }
+.center { text-align: center; margin: 8px 0; }
+
+/* ---------- ratings & reviews ---------- */
+.stars { position: relative; display: inline-block; font-size: 14px; line-height: 1; color: #e3d9d2; letter-spacing: 1px; vertical-align: -1px; }
+.stars::before { content: '★★★★★'; }
+.stars i { position: absolute; inset: 0 auto 0 0; overflow: hidden; color: var(--yellow); white-space: nowrap; }
+.stars i::before { content: '★★★★★'; }
+.stars.big { font-size: 22px; }
+.rating { display: inline-flex; align-items: center; gap: 4px; margin-top: 3px; }
+.rating small { color: var(--ink-2); font-size: 12px; font-weight: 700; }
+.rating-link { text-decoration: none; display: inline-block; margin: -6px 0 10px; }
+.reviews { margin-top: 36px; border-top: 1px solid var(--line); padding-top: 24px; max-width: 760px; }
+.reviews:empty { display: none; }
+.reviews h2 { margin-bottom: 8px; }
+.rv-sum { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+.rv { border-bottom: 1px solid var(--line); padding: 12px 0; }
+.rv p { margin: 6px 0 4px; }
+.rate-btn { border: none; background: var(--yellow-soft); color: #9a5c00; font-weight: 800; font-size: 12px; border-radius: 999px; padding: 3px 10px; cursor: pointer; margin-left: 6px; }
+.rate-form { margin-top: 12px; display: grid; gap: 8px; background: var(--yellow-soft); padding: 14px; border-radius: 14px; }
+.rate-form textarea, .rate-form input[name=name] { border: 2px solid var(--line); border-radius: 10px; padding: 10px 12px; font-size: 15px; background: #fff; }
+.star-pick { display: inline-flex; flex-direction: row-reverse; justify-content: flex-end; gap: 2px; }
+.star-pick input { position: absolute; opacity: 0; pointer-events: none; }
+.star-pick label { font-size: 34px; color: #e3d9d2; cursor: pointer; line-height: 1; }
+.star-pick input:checked ~ label, .star-pick label:hover, .star-pick label:hover ~ label { color: var(--yellow); }
+.star-pick input:focus-visible + label { outline: 2px solid var(--teal); }

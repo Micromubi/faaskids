@@ -6,7 +6,7 @@ const $$ = (s, el = document) => [...el.querySelectorAll(s)];
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const app = $('#app');
 const PIN_KEY = 'fk-admin-pin';
-let pin = sessionStorage.getItem(PIN_KEY) || localStorage.getItem(PIN_KEY) || '';
+let pin = sessionStorage.getItem(PIN_KEY) || localStorage.getItem('faaskids-pin') || '';
 let catalog = null, orders = null, invoices = null;
 
 /* ---------- api ---------- */
@@ -78,7 +78,7 @@ $('#loginForm').addEventListener('submit', async e => {
     boot();
   } catch (ex) { if (ex.message !== 'wrong pin') $('#loginErr').textContent = ex.message; }
 });
-$('#logout').addEventListener('click', () => { sessionStorage.removeItem(PIN_KEY); localStorage.removeItem(PIN_KEY); pin = ''; showLogin(); });
+$('#logout').addEventListener('click', () => { sessionStorage.removeItem(PIN_KEY); localStorage.removeItem('faaskids-pin'); localStorage.removeItem('faaskids-unlocked'); pin = ''; showLogin(); });
 
 /* =========================================================
    DASHBOARD
@@ -230,7 +230,7 @@ function orderModal(no) {
   };
   const msg = msgs[o.status] || msgs.paid;
   openModal(`<h2>Order ${esc(o.no)}</h2>
-    <p class="muted">${new Date(o.ts).toLocaleString('en-GB')} · <span class="st st-${esc(o.status)}">${STATUS[o.status]}</span></p>
+    <p class="muted">${new Date(o.ts).toLocaleString('en-GB')} · <span class="st st-${esc(o.status)}">${STATUS[o.status]}</span> · ${o.payment?.method === 'card' ? `💳 Paystack${o.payment.reference ? ' ✓ ' + esc(o.payment.channel || '') : ''}` : o.source === 'web' ? '🏦 Bank transfer' : ''}</p>
     <div class="cols2">
       <div>
         <h3>Customer</h3>
@@ -243,7 +243,7 @@ function orderModal(no) {
         <h3>Items</h3>
         <div class="recap">${o.lines.map(l => `<div><span>${esc(l.name)}${l.variantLabel ? ' · ' + esc(l.variantLabel) : ''} ×${l.qty}</span><b>${fmt(l.amount)}</b></div>`).join('')}
           ${(o.bundles || []).map(b => `<div class="save"><span>🎁 ${esc(b.name)}</span><b>−${fmt(b.saving)}</b></div>`).join('')}
-          ${o.promo?.saving ? `<div class="save"><span>Promo ${esc(o.promo.code)}</span><b>−${fmt(o.promo.saving)}</b></div>` : ''}
+          ${o.promo?.saving ? `<div class="save"><span>${o.promo.auto ? 'Website discount' : 'Coupon ' + esc(o.promo.code)}</span><b>−${fmt(o.promo.saving)}</b></div>` : ''}
           <div><span>Delivery</span><b>${o.deliveryFee ? fmt(o.deliveryFee) : 'FREE'}</b></div>
           <div class="tot"><span>Total</span><b>${fmt(o.total)}</b></div></div>
       </div>
@@ -491,37 +491,142 @@ function comboModal(id) {
 }
 
 /* =========================================================
-   PROMOS
+   PROMOS & COUPON GENERATOR
    ========================================================= */
-function pagePromos() {
-  const list = catalog.promos || [];
-  const label = p => p.type === 'percent' ? `${p.value}% off` : p.type === 'fixed' ? `${fmt(p.value)} off` : 'Free delivery';
-  return `<div class="a-head"><h1>Promo codes</h1><button class="btn primary" data-new-promo>+ New code</button></div>
-    <p class="muted lead">Share codes on Instagram or WhatsApp. They apply after combo discounts.</p>
-    <div class="plist">${list.map(p => `<button class="prow promo-row ${p.active === false ? 'off' : ''}" data-promo="${esc(p.code)}">
-      <code>${esc(p.code)}</code><span>${label(p)}${p.minSubtotal ? ` · min spend ${fmt(p.minSubtotal)}` : ''}${p.expires ? ` · until ${esc(p.expires)}` : ''}</span><span class="st ${p.active === false ? 'st-cancelled' : 'st-delivered'}">${p.active === false ? 'Off' : 'Active'}</span></button>`).join('') || '<p class="empty">No promo codes yet.</p>'}</div>`;
+const promoLabel = p => p.type === 'percent' ? `${p.value}% off` : p.type === 'fixed' ? `${fmt(p.value)} off` : 'Free delivery';
+const shopUrl = () => location.origin + '/shop.html';
+function shareText(p) {
+  if (p.auto) return `🛍️ FaasKids is now online! Get ${promoLabel(p).replace('Free delivery', 'free delivery')} on every order${p.minSubtotal ? ' over ' + fmt(p.minSubtotal) : ''} when you shop on our website — no code needed 💛\n${shopUrl()}`;
+  return `🎁 Here’s a FaasKids treat: use code *${p.code}* for ${promoLabel(p).toLowerCase()}${p.minSubtotal ? ' on orders over ' + fmt(p.minSubtotal) : ''} when you order on our website${p.expires ? ' (valid till ' + new Date(p.expires).toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) + ')' : ''} 💛\n${shopUrl()}`;
 }
-function promoModal(code) {
-  const p = code ? structuredClone(catalog.promos.find(x => x.code === code)) : { code: '', type: 'percent', value: 10, minSubtotal: 0, expires: '', active: true };
-  openModal(`<h2>${code ? 'Edit code' : 'New promo code'}</h2>
+let lastBatch = null;
+
+function pagePromos() {
+  const list = [...(catalog.promos || [])].sort((a, b) => (b.auto - a.auto) || (b.createdAt || 0) - (a.createdAt || 0));
+  const autos = list.filter(p => p.auto);
+  const codes = list.filter(p => !p.auto);
+  const usage = p => `${p.used || 0}${p.maxUses ? ' / ' + p.maxUses : ''} used`;
+  return `<div class="a-head"><h1>Discounts & coupons</h1><div class="row-btns"><button class="btn ghost" data-new-promo>+ Single code</button><button class="btn primary" data-gen-promo>✨ Generate coupons</button></div></div>
+    <section class="panel promo-hero">
+      <div><h2>🌐 Website discount</h2><p class="muted">Applied automatically to every order on the website — the easiest way to move customers from WhatsApp to the site. Shown in the shop’s top banner.</p></div>
+      ${autos.length ? autos.map(p => `<div class="auto-row ${p.active === false ? 'off' : ''}"><b>${promoLabel(p)}${p.minSubtotal ? ` over ${fmt(p.minSubtotal)}` : ''}</b><span class="muted">${p.active === false ? 'Paused' : 'Live'} · ${usage(p)}</span>
+        <button class="btn sm ghost" data-share="${esc(p.code)}">📲 Share</button><button class="btn sm ghost" data-promo="${esc(p.code)}">Edit</button></div>`).join('')
+        : '<button class="btn primary" data-new-auto>Turn on a website discount</button>'}
+    </section>
+    ${lastBatch ? batchHtml(lastBatch) : ''}
+    <h2 class="sub-h">Coupon codes</h2>
+    <div class="plist">${codes.map(p => `<div class="prow promo-row ${p.active === false ? 'off' : ''}">
+      <button class="p-main" data-promo="${esc(p.code)}"><code>${esc(p.code)}</code><span>${promoLabel(p)}${p.minSubtotal ? ` · min ${fmt(p.minSubtotal)}` : ''}${p.expires ? ` · until ${esc(p.expires)}` : ''}${p.onePerCustomer ? ' · once per customer' : ''}${p.note ? ` · <i>${esc(p.note)}</i>` : ''}</span></button>
+      <span class="muted">${usage(p)}</span>
+      <span class="row-btns"><button class="btn sm ghost" data-share="${esc(p.code)}">📲 Share</button><span class="st ${p.active === false || (p.maxUses && p.used >= p.maxUses) ? 'st-cancelled' : 'st-delivered'}">${p.active === false ? 'Off' : p.maxUses && p.used >= p.maxUses ? 'Used up' : 'Active'}</span></span>
+    </div>`).join('') || '<p class="empty">No coupon codes yet — generate a batch for your WhatsApp customers.</p>'}</div>`;
+}
+function batchHtml(b) {
+  const all = b.codes.join('\n');
+  return `<section class="panel batch"><div class="a-head"><h2>✨ ${b.codes.length} new coupon${b.codes.length > 1 ? 's' : ''} — ${esc(b.label)}</h2><button class="x" data-close-batch aria-label="Dismiss">✕</button></div>
+    <p class="muted">Send one code to each customer. ${b.codes.length > 1 ? 'Each one works for a single customer.' : ''}</p>
+    <div class="codes">${b.codes.map(c => `<span class="code-chip"><code>${c}</code><button data-copy="${c}" title="Copy">⧉</button><button data-share="${c}" title="Share on WhatsApp">📲</button></span>`).join('')}</div>
+    <div class="row-btns"><button class="btn sm ghost" data-copy="${esc(all)}">Copy all codes</button><button class="btn sm ghost" data-csv>⬇️ Download list (CSV)</button></div>
+  </section>`;
+}
+function shareModal(code) {
+  const p = catalog.promos.find(x => x.code === code);
+  if (!p) return;
+  const text = shareText(p);
+  openModal(`<h2>Share ${p.auto ? 'your website discount' : esc(p.code)}</h2>
+    <label class="fld"><span>Message (edit if you like)</span><textarea id="shareTxt" rows="5">${esc(text)}</textarea></label>
+    <div class="modal-ft">
+      <a class="btn wa" id="shareWa" target="_blank" rel="noopener" href="https://wa.me/?text=${encodeURIComponent(text)}">📲 WhatsApp</a>
+      <button class="btn ghost" id="shareCopy">Copy message</button>
+      ${navigator.share ? '<button class="btn ghost" id="shareNative">More…</button>' : ''}
+    </div>
+    <p class="tiny">Tip: post it as your WhatsApp Status or Instagram story too.</p>`);
+  const msg = () => $('#shareTxt').value;
+  $('#shareTxt').addEventListener('input', () => { $('#shareWa').href = 'https://wa.me/?text=' + encodeURIComponent(msg()); });
+  $('#shareCopy').addEventListener('click', async () => { await navigator.clipboard.writeText(msg()).catch(() => {}); toast('Copied ✓'); });
+  $('#shareNative')?.addEventListener('click', () => navigator.share({ text: msg() }).catch(() => {}));
+}
+function promoFields(p, { code = true } = {}) {
+  return `<div class="cols3">
+      ${code ? `<label class="fld"><span>Code</span><input name="code" value="${esc(p.code)}" required style="text-transform:uppercase" placeholder="SCHOOL15"></label>` : ''}
+      <label class="fld"><span>Discount</span><select name="type"><option value="percent" ${p.type === 'percent' ? 'selected' : ''}>% off</option><option value="fixed" ${p.type === 'fixed' ? 'selected' : ''}>₦ off</option><option value="freeship" ${p.type === 'freeship' ? 'selected' : ''}>Free delivery</option></select></label>
+      <label class="fld"><span>Value (% or ₦)</span><input name="value" type="number" min="0" value="${p.value}"></label>
+      <label class="fld"><span>Minimum spend (₦)</span><input name="minSubtotal" type="number" min="0" value="${p.minSubtotal || ''}" placeholder="none"></label>
+      <label class="fld"><span>Expires</span><input name="expires" type="date" value="${esc(p.expires || '')}"></label>
+      <label class="fld"><span>Total uses allowed</span><input name="maxUses" type="number" min="0" value="${p.maxUses || ''}" placeholder="unlimited"></label>
+    </div>
+    <div class="checks wrap-checks">
+      <label><input type="checkbox" name="onePerCustomer" ${p.onePerCustomer ? 'checked' : ''}> Once per customer (phone number)</label>
+      <label><input type="checkbox" name="active" ${p.active !== false ? 'checked' : ''}> Active</label>
+    </div>`;
+}
+const readPromo = f => ({
+  code: f.get('code') || '', type: f.get('type'), value: Number(f.get('value')) || 0, minSubtotal: Number(f.get('minSubtotal')) || 0,
+  expires: f.get('expires') || '', maxUses: Number(f.get('maxUses')) || 0, onePerCustomer: f.get('onePerCustomer') === 'on',
+  active: f.get('active') === 'on', note: f.get('note') || '', label: f.get('label') || ''
+});
+function promoModal(code, auto = false) {
+  const p = code ? structuredClone(catalog.promos.find(x => x.code === code)) : { code: auto ? 'WEBSITE' : '', type: 'percent', value: auto ? 5 : 10, minSubtotal: 0, expires: '', active: true, auto };
+  const isAuto = Boolean(p.auto);
+  openModal(`<h2>${isAuto ? '🌐 Website discount' : code ? 'Edit code' : 'New coupon code'}</h2>
+    ${isAuto ? '<p class="muted">Every website order gets this automatically. Customers can still enter a coupon — they get whichever is bigger.</p>' : ''}
     <form id="prForm">
-      <div class="cols3">
-        <label class="fld"><span>Code</span><input name="code" value="${esc(p.code)}" required style="text-transform:uppercase" placeholder="SCHOOL15"></label>
-        <label class="fld"><span>Type</span><select name="type"><option value="percent" ${p.type === 'percent' ? 'selected' : ''}>% off</option><option value="fixed" ${p.type === 'fixed' ? 'selected' : ''}>₦ off</option><option value="freeship" ${p.type === 'freeship' ? 'selected' : ''}>Free delivery</option></select></label>
-        <label class="fld"><span>Value</span><input name="value" type="number" min="0" value="${p.value}"></label>
-        <label class="fld"><span>Minimum spend (₦)</span><input name="minSubtotal" type="number" min="0" value="${p.minSubtotal || ''}"></label>
-        <label class="fld"><span>Expires (optional)</span><input name="expires" type="date" value="${esc(p.expires || '')}"></label>
-        <label class="checks"><input type="checkbox" name="active" ${p.active !== false ? 'checked' : ''}> Active</label>
-      </div>
-      <div class="modal-ft">${code ? '<button type="button" class="btn ghost danger" id="prDel">Delete</button>' : ''}<span class="grow"></span><button class="btn primary" id="prSave">Save code</button></div>
-    </form>`);
-  $('#prDel')?.addEventListener('click', e => { if (confirm('Delete this code?')) busy(e.target, async () => { await op('deletePromo', { code }); closeModal(); render(); }); });
+      ${isAuto ? `<input type="hidden" name="code" value="${esc(p.code)}">` : ''}
+      ${promoFields(p, { code: !isAuto })}
+      ${isAuto ? `<label class="fld"><span>Label shown to shoppers</span><input name="label" value="${esc(p.label || '')}" placeholder="Website discount"></label>`
+        : `<label class="fld"><span>Note for you (who it’s for)</span><input name="note" value="${esc(p.note || '')}" placeholder="e.g. Mrs Ade, Instagram giveaway"></label>`}
+      ${code ? `<p class="tiny">Used ${p.used || 0} time(s).</p>` : ''}
+      <div class="modal-ft">${code ? '<button type="button" class="btn ghost danger" id="prDel">Delete</button>' : ''}<span class="grow"></span><button class="btn primary" id="prSave">Save</button></div>
+    </form>`, true);
+  $('#prDel')?.addEventListener('click', e => { if (confirm('Delete this discount?')) busy(e.target, async () => { await op('deletePromo', { code }); closeModal(); render(); }); });
   $('#prForm').addEventListener('submit', e => {
     e.preventDefault();
-    const f = new FormData(e.target);
-    const promo = { code: f.get('code'), type: f.get('type'), value: Number(f.get('value')) || 0, minSubtotal: Number(f.get('minSubtotal')) || 0, expires: f.get('expires'), active: f.get('active') === 'on' };
-    busy($('#prSave'), async () => { await op('savePromo', { promo, previousCode: code }); closeModal(); toast('Code saved'); render(); });
+    const promo = { ...readPromo(new FormData(e.target)), auto: isAuto };
+    busy($('#prSave'), async () => { await op('savePromo', { promo, previousCode: code }); closeModal(); toast('Saved'); render(); });
   });
+}
+function generatorModal() {
+  const t = { type: 'percent', value: 10, minSubtotal: 0, expires: new Date(Date.now() + 30 * 864e5).toISOString().slice(0, 10), maxUses: 1, onePerCustomer: true, active: true };
+  openModal(`<h2>✨ Coupon generator</h2>
+    <p class="muted">Make unique codes to send to customers — e.g. one each for your WhatsApp regulars to try the website.</p>
+    <form id="genForm">
+      <div class="cols3">
+        <label class="fld"><span>How many codes</span><input name="count" type="number" min="1" max="200" value="10"></label>
+        <label class="fld"><span>Code starts with</span><input name="prefix" value="FK" maxlength="12" style="text-transform:uppercase"></label>
+        <label class="fld"><span>Note (who they’re for)</span><input name="note" placeholder="e.g. WhatsApp customers Nov"></label>
+      </div>
+      ${promoFields(t, { code: false })}
+      <p class="tiny">Each code: “Total uses allowed” applies per code. Leave it at 1 for one-time codes.</p>
+      <div class="modal-ft"><span class="grow"></span><button class="btn primary" id="genGo">Generate codes</button></div>
+    </form>`, true);
+  $('#genForm').addEventListener('submit', e => {
+    e.preventDefault();
+    const f = new FormData(e.target);
+    const template = readPromo(f);
+    busy($('#genGo'), async () => {
+      const r = await op('generatePromos', { template, count: Number(f.get('count')) || 1, prefix: f.get('prefix') });
+      lastBatch = { codes: r.codes, label: `${promoLabel(template)}${template.note ? ' · ' + template.note : ''}` };
+      closeModal();
+      location.hash = '#/promos';
+      render();
+      toast(`Created ${r.codes.length} code(s)`);
+    });
+  });
+}
+
+/* =========================================================
+   REVIEWS
+   ========================================================= */
+let reviews = null;
+function pageReviews() {
+  if (!reviews) { api('/api/reviews?all=1').then(r => { reviews = r.reviews || []; render(); }).catch(() => {}); return '<div class="loading"><div class="spinner"></div></div>'; }
+  const list = [...reviews].sort((a, b) => b.ts - a.ts);
+  return `<div class="a-head"><h1>Reviews</h1></div>
+    <p class="muted lead">Only customers with a paid order can review what they bought (they sign in with their phone code). Hide anything you don’t want shown.</p>
+    <div class="plist">${list.map(r => `<div class="prow rv-row ${r.hidden ? 'off' : ''}">
+      <div><b>${'★'.repeat(r.rating)}${'☆'.repeat(5 - r.rating)}</b> <span class="muted">${esc(product(r.productId)?.name || r.productId)}</span><p>${esc(r.text) || '<i class="muted">No comment</i>'}</p><small class="muted">${esc(r.name)} · ${esc(r.phone)} · ${date(r.ts)}</small></div>
+      <div class="row-btns"><button class="btn sm ghost" data-rv-hide="${esc(r.id)}">${r.hidden ? 'Show' : 'Hide'}</button><button class="btn sm ghost danger" data-rv-del="${esc(r.id)}">Delete</button></div>
+    </div>`).join('') || '<p class="empty">No reviews yet. Customers can leave one from “My orders” after paying.</p>'}</div>`;
 }
 
 /* =========================================================
@@ -540,6 +645,7 @@ function pageSettings() {
         <label class="fld"><span>WhatsApp number (234…)</span><input name="whatsapp" value="${esc(s.whatsapp)}"></label>
         <label class="fld"><span>Phone (display)</span><input name="phoneDisplay" value="${esc(s.phoneDisplay)}"></label>
         <label class="fld"><span>Instagram</span><input name="instagram" value="${esc(s.instagram)}"></label>
+        <label class="fld"><span>Text me new orders on (phone)</span><input name="alertPhone" value="${esc(s.alertPhone || '')}" placeholder="0809… (needs SMS set up)"></label>
       </div>
       <h2>Bank transfer details</h2>
       <div class="cols3">
@@ -571,7 +677,7 @@ function wireSettings() {
     const f = new FormData(e.target);
     const settings = {
       announcement: f.get('announcement'), freeDeliveryOver: Number(f.get('freeDeliveryOver')) || 0, lowStockAt: Number(f.get('lowStockAt')) || 0,
-      whatsapp: f.get('whatsapp'), phoneDisplay: f.get('phoneDisplay'), instagram: f.get('instagram'),
+      whatsapp: f.get('whatsapp'), phoneDisplay: f.get('phoneDisplay'), instagram: f.get('instagram'), alertPhone: f.get('alertPhone'),
       bank: { name: f.get('bank.name'), bank: f.get('bank.bank'), number: f.get('bank.number') },
       zones: $$('#zones .zrow').map(r => ({ id: $('[data-z=id]', r).value, name: $('[data-z=name]', r).value, fee: Number($('[data-z=fee]', r).value) || 0 }))
     };
@@ -592,7 +698,7 @@ function render() {
   const params = new URLSearchParams(qs || '');
   const page = path.split('/').filter(Boolean)[0] || '';
   $$('#tabs a').forEach(a => a.classList.toggle('on', a.getAttribute('href') === '#/' + page));
-  const pages = { '': pageDashboard, orders: pageOrders, products: pageProducts, combos: pageCombos, promos: pagePromos, settings: pageSettings };
+  const pages = { '': pageDashboard, orders: pageOrders, products: pageProducts, combos: pageCombos, promos: pagePromos, reviews: pageReviews, settings: pageSettings };
   app.innerHTML = (pages[page] || pageDashboard)(params);
   if (page === '') wireChart();
   if (page === 'settings') wireSettings();
@@ -609,7 +715,7 @@ window.addEventListener('hashchange', render);
 app.addEventListener('click', e => { if (e.target.matches('[data-rm]')) e.target.parentElement.remove(); });
 
 app.addEventListener('click', async e => {
-  const t = e.target.closest('[data-period],[data-order],[data-edit],[data-new-product],[data-adj],[data-combo],[data-new-combo],[data-promo],[data-new-promo],[data-reload]');
+  const t = e.target.closest('[data-period],[data-order],[data-edit],[data-new-product],[data-adj],[data-combo],[data-new-combo],[data-promo],[data-new-promo],[data-new-auto],[data-gen-promo],[data-share],[data-copy],[data-csv],[data-close-batch],[data-rv-hide],[data-rv-del],[data-reload]');
   if (!t) return;
   if (t.dataset.period !== undefined) { period = Number(t.dataset.period); render(); }
   else if (t.dataset.order) orderModal(t.dataset.order);
@@ -625,14 +731,68 @@ app.addEventListener('click', async e => {
   else if (t.hasAttribute('data-new-combo')) comboModal(null);
   else if (t.dataset.promo) promoModal(t.dataset.promo);
   else if (t.hasAttribute('data-new-promo')) promoModal(null);
+  else if (t.hasAttribute('data-new-auto')) promoModal(null, true);
+  else if (t.hasAttribute('data-gen-promo')) generatorModal();
+  else if (t.dataset.share) shareModal(t.dataset.share);
+  else if (t.dataset.copy) { await navigator.clipboard.writeText(t.dataset.copy).catch(() => {}); toast('Copied ✓'); }
+  else if (t.hasAttribute('data-close-batch')) { lastBatch = null; render(); }
+  else if (t.hasAttribute('data-csv')) {
+    const rows = [['code', 'discount', 'note', 'expires'], ...lastBatch.codes.map(c => { const p = catalog.promos.find(x => x.code === c) || {}; return [c, promoLabel(p), p.note || '', p.expires || '']; })];
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(new Blob([rows.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n')], { type: 'text/csv' }));
+    a.download = `faaskids-coupons-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+  }
+  else if (t.dataset.rvHide || t.dataset.rvDel) {
+    const del = Boolean(t.dataset.rvDel);
+    if (del && !confirm('Delete this review?')) return;
+    await api('/api/reviews?id=' + encodeURIComponent(t.dataset.rvHide || t.dataset.rvDel), { method: del ? 'DELETE' : 'PATCH' });
+    reviews = null; render();
+  }
   else if (t.hasAttribute('data-reload')) { await loadOrders(); render(); toast('Up to date'); }
 });
+
+/* ---------- new-order alerts while the admin is open ---------- */
+let knownOrders = null;
+function chime() {
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)();
+    [880, 1320].forEach((f, i) => { const o = ctx.createOscillator(), g = ctx.createGain(); o.frequency.value = f; g.gain.setValueAtTime(.15, ctx.currentTime + i * .18); g.gain.exponentialRampToValueAtTime(.001, ctx.currentTime + i * .18 + .3); o.connect(g).connect(ctx.destination); o.start(ctx.currentTime + i * .18); o.stop(ctx.currentTime + i * .18 + .3); });
+  } catch {}
+}
+function updateTitle() {
+  const n = (orders || []).filter(o => o.status === 'pending' || o.status === 'paid').length;
+  document.title = (n ? `(${n}) ` : '') + 'FaasKids Admin';
+  const tab = $('#tabs a[href="#/orders"]');
+  if (tab) tab.dataset.count = n || '';
+}
+async function poll() {
+  if (document.hidden || !pin) return;
+  try {
+    const before = new Set((orders || []).map(o => o.no + o.status));
+    await loadOrders();
+    const fresh = orders.filter(o => !knownOrders.has(o.no));
+    const changed = orders.some(o => !before.has(o.no + o.status));
+    fresh.forEach(o => knownOrders.add(o.no));
+    if (fresh.length) {
+      chime();
+      toast(`🛍️ New order ${esc(fresh[0].no)} — ${fmt(fresh[0].total)} from ${esc(fresh[0].customer.name)}`);
+      if (window.Notification?.permission === 'granted') new Notification('New FaasKids order', { body: `${fresh[0].no} · ${fmt(fresh[0].total)} · ${fresh[0].customer.name}`, icon: 'logo.jpg' });
+    }
+    updateTitle();
+    if (changed && $('#modal').hidden && !document.activeElement?.matches('input,textarea,select')) render();
+  } catch {}
+}
 
 async function boot() {
   app.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
   try {
     await Promise.all([loadCatalog(), loadOrders(), loadInvoices()]);
+    knownOrders = new Set(orders.map(o => o.no));
+    updateTitle();
     render();
+    if (!boot.polling) { boot.polling = setInterval(poll, 45000); document.addEventListener('visibilitychange', () => !document.hidden && poll()); }
+    if (window.Notification && Notification.permission === 'default') document.addEventListener('click', () => Notification.requestPermission().catch(() => {}), { once: true });
   } catch (e) {
     if (e.message !== 'wrong pin') app.innerHTML = `<div class="notice">Couldn’t load: ${esc(e.message)}</div>`;
   }

@@ -217,6 +217,12 @@
   .chip:active, .chip.active { background: var(--yellow); color: #fff; }
 
   .custom-name { margin-top: 10px; display: none; }
+  .size-row { display: none; gap: 10px; align-items: center; margin-top: 10px; }
+  .item-card.has-size .size-row, .item-card .size-row:has(.stock-note:not(:empty)) { display: flex; }
+  .item-card:not(.has-size) .i-size { display: none; }
+  .size-row select { flex: 1; }
+  .stock-note { font-size: 13px; font-weight: 800; color: var(--teal); white-space: nowrap; }
+  .stock-note.out { color: var(--pink); }
   .custom-name.show { display: block; }
 
   .btn {
@@ -626,7 +632,7 @@
     <button>1</button><button>2</button><button>3</button>
     <button>4</button><button>5</button><button>6</button>
     <button>7</button><button>8</button><button>9</button>
-    <button class="ghost" data-k="clear">Clear</button><button>0</button><button class="ghost" data-k="del">⌫</button>
+    <button class="ghost" data-k="del">⌫</button><button>0</button><button class="ghost" data-k="ok">OK</button>
   </div>
 </div>
 
@@ -819,7 +825,7 @@
 </div>
 
 <script>
-const PIN = '1995';
+let PIN = localStorage.getItem('faaskids-pin') || ''; // checked by the server, never stored in this file
 const PAY = {
   name: 'FaasKids Clothing_Accessories',
   bank: 'Moniepoint',
@@ -830,6 +836,7 @@ const ITEM_TYPES = [
   'Girls Dress', 'Boys Dress', 'Shoes', 'Inner Wear', 'Other…'
 ];
 const QUICK_PRICES = [14000, 16000, 18000, 25000, 29000];
+let shopProducts = []; // from the online shop, so invoice sales take stock too
 
 const fmt = n => '₦' + Number(n || 0).toLocaleString('en-NG');
 
@@ -840,45 +847,71 @@ const pinMsg = document.getElementById('pinMsg');
 let entered = '';
 
 function drawDots() {
-  [...pinDots].forEach((d, i) => d.classList.toggle('on', i < entered.length));
+  const box = document.getElementById('pinDots');
+  const n = Math.max(4, entered.length);
+  if (box.children.length !== n) box.innerHTML = '<span></span>'.repeat(n);
+  [...box.children].forEach((d, i) => d.classList.toggle('on', i < entered.length));
 }
-function unlock() {
+const sha = async t => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode('fk:' + t)))].map(b => b.toString(16).padStart(2, '0')).join('');
+function unlock(pin) {
+  PIN = pin;
+  localStorage.setItem('faaskids-pin', pin);
+  localStorage.setItem('faaskids-pin-len', String(pin.length));
   localStorage.setItem('faaskids-unlocked', '1');
   lockscreen.classList.add('hidden');
+  loadShopProducts();
 }
 function lock() {
   localStorage.removeItem('faaskids-unlocked');
+  localStorage.removeItem('faaskids-pin');
+  PIN = '';
   entered = '';
   drawDots();
   pinMsg.textContent = 'Enter PIN';
   lockscreen.classList.remove('hidden');
 }
+function wrongPin(msg = 'Wrong PIN — try again') {
+  pinMsg.textContent = msg;
+  pinMsg.classList.remove('shake');
+  void pinMsg.offsetWidth;
+  pinMsg.classList.add('shake');
+  entered = '';
+  setTimeout(drawDots, 250);
+}
+async function tryPin() {
+  const pin = entered;
+  if (pin.length < 4) return wrongPin('PIN is at least 4 digits');
+  pinMsg.textContent = 'Checking…';
+  try {
+    const r = await fetch('/api/catalog', { method: 'POST', headers: { 'x-pin': pin, 'Content-Type': 'application/json' }, body: '{"op":"auth"}' });
+    if (r.ok) {
+      localStorage.setItem('faaskids-pin-hash', await sha(pin)); // lets you unlock offline next time
+      entered = ''; drawDots(); pinMsg.textContent = 'Enter PIN';
+      return unlock(pin);
+    }
+    if (r.status === 401) return wrongPin();
+    throw new Error('server ' + r.status);
+  } catch (e) {
+    // offline: accept the PIN that last worked on this phone
+    const known = localStorage.getItem('faaskids-pin-hash');
+    if (known && known === await sha(pin)) { entered = ''; drawDots(); return unlock(pin); }
+    wrongPin(known ? 'Wrong PIN — try again' : 'No connection — try again');
+  }
+}
 document.getElementById('pinpad').addEventListener('click', e => {
   const btn = e.target.closest('button');
   if (!btn) return;
   const k = btn.dataset.k || btn.textContent.trim();
-  if (k === 'clear') entered = '';
-  else if (k === 'del' || k === '⌫') entered = entered.slice(0, -1);
-  else if (/^\d$/.test(k) && entered.length < 4) entered += k;
+  if (k === 'del') entered = entered.slice(0, -1);
+  else if (k === 'ok') return tryPin();
+  else if (/^\d$/.test(k) && entered.length < 8) entered += k;
   drawDots();
   pinMsg.textContent = 'Enter PIN';
-  if (entered.length === 4) {
-    if (entered === PIN) {
-      unlock();
-      entered = '';
-      drawDots();
-    } else {
-      pinMsg.textContent = 'Wrong PIN — try again';
-      pinMsg.classList.remove('shake');
-      void pinMsg.offsetWidth;
-      pinMsg.classList.add('shake');
-      entered = '';
-      setTimeout(drawDots, 250);
-    }
-  }
+  const len = Number(localStorage.getItem('faaskids-pin-len')) || 4;
+  if (entered.length === len) tryPin();
 });
 document.getElementById('lockBtn').addEventListener('click', lock);
-if (localStorage.getItem('faaskids-unlocked') === '1') lockscreen.classList.add('hidden');
+if (localStorage.getItem('faaskids-unlocked') === '1' && PIN) lockscreen.classList.add('hidden');
 
 /* ===== invoice number: FK-YYMMDD-NNN, counter persisted per day ===== */
 function makeInvoiceNo() {
@@ -903,9 +936,8 @@ function addItemRow(focus = true, data = null) {
   card.innerHTML = `
     <button class="remove" title="Remove item">✕</button>
     <label>Item</label>
-    <select class="i-type">
-      ${ITEM_TYPES.map(t => `<option>${t}</option>`).join('')}
-    </select>
+    <select class="i-type">${itemOptions()}</select>
+    <div class="size-row"><select class="i-size" aria-label="Size"></select><span class="stock-note"></span></div>
     <div class="custom-name">
       <input type="text" class="i-custom" placeholder="Type item name">
     </div>
@@ -935,10 +967,25 @@ function addItemRow(focus = true, data = null) {
   const priceInput = card.querySelector('.i-price');
   const qtyInput = card.querySelector('.i-qty');
 
-  sel.addEventListener('change', () => {
+  const sizeSel = card.querySelector('.i-size');
+  const syncProduct = (fillPrice) => {
     customWrap.classList.toggle('show', sel.value === 'Other…');
-    render();
-  });
+    const p = productFor(sel.value);
+    card.classList.toggle('has-size', Boolean(p && p.variants.length > 1));
+    if (p) {
+      const keep = sizeSel.value;
+      sizeSel.innerHTML = p.variants.map(v => `<option value="${escapeHtml(v.id)}">${escapeHtml(v.label || 'One size')} (${v.stock} left)</option>`).join('');
+      if (p.variants.some(v => v.id === keep)) sizeSel.value = keep;
+      if (fillPrice) {
+        priceInput.value = p.price;
+        card.querySelectorAll('.chip').forEach(c => c.classList.toggle('active', c.dataset.price === String(p.price)));
+      }
+    }
+    updateStockNote(card);
+  };
+  card.syncProduct = syncProduct;
+  sel.addEventListener('change', () => { syncProduct(true); render(); });
+  sizeSel.addEventListener('change', () => { updateStockNote(card); render(); });
   card.querySelector('.remove').addEventListener('click', () => { card.remove(); render(); });
   card.querySelector('.q-minus').addEventListener('click', () => {
     qtyInput.value = Math.max(1, (parseInt(qtyInput.value) || 1) - 1); render();
@@ -961,7 +1008,15 @@ function addItemRow(focus = true, data = null) {
   });
   card.querySelectorAll('input').forEach(i => i.addEventListener('input', render));
 
-  if (data) {
+  if (data && data.productId && productFor('p:' + data.productId)) {
+    sel.value = 'p:' + data.productId;
+    syncProduct(false);
+    if (data.variantId) sizeSel.value = data.variantId;
+    qtyInput.value = data.qty;
+    priceInput.value = data.price || '';
+    updateStockNote(card);
+  } else if (data) {
+    if (data.productId) card.dataset.pending = JSON.stringify(data); // shop list not loaded yet
     if (ITEM_TYPES.includes(data.name)) {
       sel.value = data.name;
     } else {
@@ -975,8 +1030,54 @@ function addItemRow(focus = true, data = null) {
       c.classList.toggle('active', c.dataset.price === String(data.price)));
   }
 
+  if (!data) syncProduct(true);
   itemsEl.appendChild(card);
   if (focus) sel.focus();
+  render();
+}
+
+function productFor(value) {
+  return value && value.startsWith('p:') ? shopProducts.find(p => p.id === value.slice(2)) : null;
+}
+function itemOptions() {
+  const basic = ITEM_TYPES.map(t => `<option>${t}</option>`).join('');
+  if (!shopProducts.length) return basic;
+  return `<optgroup label="Shop products (updates stock)">${shopProducts.map(p => `<option value="p:${escapeHtml(p.id)}">${escapeHtml(p.name)}</option>`).join('')}</optgroup><optgroup label="Other items">${basic}</optgroup>`;
+}
+function updateStockNote(card) {
+  const p = productFor(card.querySelector('.i-type').value);
+  const note = card.querySelector('.stock-note');
+  if (!p) { note.textContent = ''; return; }
+  const v = p.variants.find(x => x.id === card.querySelector('.i-size').value) || p.variants[0];
+  note.textContent = v.stock > 0 ? `${v.stock} in stock` : 'Out of stock';
+  note.classList.toggle('out', v.stock <= 0);
+}
+async function loadShopProducts() {
+  try {
+    const r = await fetch('/api/catalog', { headers: { 'x-pin': PIN } });
+    if (!r.ok) return;
+    shopProducts = ((await r.json()).products || []).filter(p => p.active !== false);
+  } catch (e) { return; }
+  // refresh pickers already on screen, keeping what was chosen
+  itemsEl.querySelectorAll('.item-card').forEach(card => {
+    const sel = card.querySelector('.i-type');
+    const cur = sel.value;
+    sel.innerHTML = itemOptions();
+    if (card.dataset.pending) {
+      const d = JSON.parse(card.dataset.pending);
+      if (productFor('p:' + d.productId)) {
+        delete card.dataset.pending;
+        sel.value = 'p:' + d.productId;
+        card.syncProduct(false);
+        if (d.variantId) card.querySelector('.i-size').value = d.variantId;
+        updateStockNote(card);
+        return;
+      }
+    }
+    sel.value = cur;
+    if (!sel.value) sel.value = 'Other…';
+    card.syncProduct(false);
+  });
   render();
 }
 
@@ -984,9 +1085,15 @@ function getItems() {
   return [...itemsEl.querySelectorAll('.item-card')].map(card => {
     const type = card.querySelector('.i-type').value;
     const custom = card.querySelector('.i-custom').value.trim();
-    const name = type === 'Other…' ? (custom || 'Item') : type;
     const qty = Math.max(1, parseInt(card.querySelector('.i-qty').value) || 1);
     const price = Math.max(0, parseFloat(card.querySelector('.i-price').value) || 0);
+    const p = productFor(type);
+    if (p) {
+      const v = p.variants.find(x => x.id === card.querySelector('.i-size').value) || p.variants[0];
+      return { name: p.name + (v.label ? ` (${v.label})` : ''), qty, price, amount: qty * price, productId: p.id, variantId: v.id };
+    }
+    if (card.dataset.pending) { const d = JSON.parse(card.dataset.pending); return { name: d.name, qty, price, amount: qty * price, productId: d.productId, variantId: d.variantId }; }
+    const name = type === 'Other…' ? (custom || 'Item') : type;
     return { name, qty, price, amount: qty * price };
   }).filter(i => i.price > 0 || i.name !== 'Item');
 }
@@ -1074,7 +1181,32 @@ function saveToHistory() {
   if (h.length > 200) h.length = 200;
   localStorage.setItem(HIST_KEY, JSON.stringify(h));
   cloudPush(entry); // fire-and-forget cloud backup
+  syncStock(entry.no, items);
 }
+
+/* invoice sales of shop products take stock; the server only applies changes,
+   so exporting the same invoice several times never double-counts */
+const STOCK_KEY = 'faaskids-stock-synced';
+function syncStock(no, items) {
+  const synced = new Set(JSON.parse(localStorage.getItem(STOCK_KEY) || '[]'));
+  const lines = (items || []).filter(i => i.productId).map(i => ({ productId: i.productId, variantId: i.variantId, qty: i.qty }));
+  const sig = JSON.stringify(lines);
+  if (!lines.length && !synced.has(no)) return;
+  if (syncStock.last[no] === sig) return;
+  fetch('/api/catalog', {
+    method: 'POST',
+    headers: { 'x-pin': PIN, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ op: 'invoiceStock', invoiceNo: no, lines })
+  }).then(r => r.ok ? r.json() : null).then(r => {
+    if (!r) return;
+    syncStock.last[no] = sig;
+    lines.length ? synced.add(no) : synced.delete(no);
+    localStorage.setItem(STOCK_KEY, JSON.stringify([...synced].slice(-1000)));
+    if (r.catalog) shopProducts = r.catalog.products.filter(p => p.active !== false);
+    itemsEl.querySelectorAll('.item-card').forEach(c => c.syncProduct && c.syncProduct(false));
+  }).catch(() => {});
+}
+syncStock.last = {};
 
 /* ===== cloud backup (Vercel Blob via /api/invoices) ===== */
 const CLOUD_API = '/api/invoices';
@@ -1162,6 +1294,7 @@ function renderHistory() {
     el.querySelector('.del').addEventListener('click', () => {
       if (!confirm(`Delete invoice ${el.dataset.no}?`)) return;
       localStorage.setItem(HIST_KEY, JSON.stringify(getHistory().filter(e => e.no !== el.dataset.no)));
+      syncStock(el.dataset.no, []); // a deleted invoice puts its shop items back in stock
       cloudFetch('DELETE', null, '?no=' + encodeURIComponent(el.dataset.no)).catch(() => {});
       renderHistory();
     });
@@ -1456,6 +1589,7 @@ document.getElementById('newBtn').addEventListener('click', () => {
   if (!(h.items || []).length) addItemRow(false);
 })();
 render();
+if (PIN && localStorage.getItem('faaskids-unlocked') === '1') loadShopProducts();
 </script>
 </body>
 </html>

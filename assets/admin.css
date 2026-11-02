@@ -153,3 +153,28 @@ body.admin { background: var(--surface-2); }
 .promo-row { grid-template-columns: 160px 1fr auto; cursor: pointer; font-size: 14.5px; }
 .promo-row code { font-weight: 800; font-size: 15px; }
 @media (max-width: 760px) { .promo-row { grid-template-columns: 1fr auto; } }
+
+/* ---------- discounts & coupons ---------- */
+.row-btns { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.sub-h { font-size: 20px; margin: 22px 0 10px; }
+.promo-hero { display: grid; gap: 12px; margin-bottom: 16px; background: linear-gradient(135deg, var(--pink-soft), var(--yellow-soft)); border: none; }
+.promo-hero h2 { margin-bottom: 4px; }
+.auto-row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; background: #fff; border-radius: 14px; padding: 10px 14px; }
+.auto-row b { font-size: 18px; font-family: 'Baloo 2', sans-serif; }
+.auto-row .muted { flex: 1; }
+.auto-row.off { opacity: .6; }
+.promo-row { grid-template-columns: minmax(0, 1fr) auto auto; }
+.promo-row .p-main { gap: 14px; }
+.promo-row code { font-weight: 800; font-size: 15px; background: var(--surface-2); padding: 4px 8px; border-radius: 8px; flex: 0 0 auto; }
+.promo-row .p-main span { font-size: 14px; }
+@media (max-width: 760px) { .promo-row { grid-template-columns: 1fr; } }
+.batch { margin-bottom: 16px; border: 2px solid var(--teal); }
+.batch .a-head { margin-bottom: 4px; }
+.codes { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0; }
+.code-chip { display: inline-flex; align-items: center; gap: 2px; background: var(--teal-soft); border-radius: 10px; padding: 4px 4px 4px 10px; }
+.code-chip code { font-weight: 800; font-size: 14px; margin-right: 4px; }
+.code-chip button { border: none; background: #fff; border-radius: 7px; width: 30px; height: 30px; cursor: pointer; }
+.wrap-checks { flex-wrap: wrap; gap: 18px; margin: 4px 0 12px; }
+.rv-row { grid-template-columns: minmax(0, 1fr) auto; }
+.rv-row p { margin: 4px 0; }
+.a-tabs a[data-count]:not([data-count=""])::after { content: attr(data-count); background: var(--pink); color: #fff; border-radius: 9px; font-size: 11px; padding: 1px 6px; margin-left: 6px; }
