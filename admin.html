@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#2f2733">
+<meta name="robots" content="noindex">
+<meta name="format-detection" content="telephone=no">
+<title>FaasKids Admin</title>
+<link rel="icon" type="image/jpeg" href="logo.jpg">
+<link rel="apple-touch-icon" href="logo.jpg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="assets/shop.css">
+<link rel="stylesheet" href="assets/admin.css">
+</head>
+<body class="admin">
+<div class="login" id="login" hidden>
+  <form id="loginForm">
+    <img src="logo.jpg" alt="">
+    <h1><b class="b1">Faas</b><b class="b2">Kids</b> Admin</h1>
+    <label class="fld"><span>Admin PIN</span><input id="pinInput" type="password" inputmode="numeric" autocomplete="current-password" required></label>
+    <div class="err" id="loginErr"></div>
+    <button class="btn primary block">Unlock</button>
+    <a class="tiny" href="index.html">← Back to invoices</a>
+  </form>
+</div>
+
+<header class="a-hdr">
+  <a class="logo" href="#/"><img src="logo.jpg" alt=""><span><b class="b1">Faas</b><b class="b2">Kids</b></span><em>Admin</em></a>
+  <nav class="a-tabs" id="tabs">
+    <a href="#/">📊 Dashboard</a>
+    <a href="#/orders">🧾 Orders</a>
+    <a href="#/products">👗 Products & stock</a>
+    <a href="#/combos">🎁 Combos</a>
+    <a href="#/promos">🏷️ Promo codes</a>
+    <a href="#/settings">⚙️ Settings</a>
+  </nav>
+  <div class="a-links">
+    <a class="btn sm ghost" href="shop.html" target="_blank" rel="noopener">View shop ↗</a>
+    <a class="btn sm ghost" href="index.html">Invoices</a>
+    <button class="btn sm ghost" id="logout">🔒</button>
+  </div>
+</header>
+
+<main id="app" class="a-main"></main>
+
+<div class="modal" id="modal" hidden><div class="modal-card" role="dialog" aria-modal="true"><button class="x modal-x" id="modalX" aria-label="Close">✕</button><div id="modalBody"></div></div></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+<script type="module" src="assets/admin.js"></script>
+</body>
+</html>

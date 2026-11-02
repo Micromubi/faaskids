@@ -71,6 +71,16 @@
     cursor: pointer;
   }
 
+  .topbar .lock.newsite { text-decoration: none; background: var(--pink); border-color: var(--pink); color: #fff; white-space: nowrap; }
+  .topbar .lock { white-space: nowrap; }
+  @media (max-width: 440px) {
+    .topbar { gap: 6px; padding-left: 12px; padding-right: 12px; }
+    .topbar img { width: 38px; height: 38px; }
+    .topbar .brand { font-size: 20px; }
+    .topbar .inv-word, .topbar .lbl-long, .topbar .tag { display: none; }
+    .topbar .lock { padding: 8px 9px; }
+  }
+
   .wrap {
     max-width: 560px;
     margin: 0 auto;
@@ -623,10 +633,11 @@
 <div class="topbar">
   <img src="logo.jpg" alt="FaasKids logo">
   <div>
-    <div class="brand"><span class="b1">Faas</span><span class="b2">Kids</span> Invoice</div>
+    <div class="brand"><span class="b1">Faas</span><span class="b2">Kids</span><span class="inv-word"> Invoice</span></div>
     <div class="tag">Grow with Style</div>
   </div>
-  <button class="lock" id="salesBtn" style="margin-left:auto">📊 Sales</button>
+  <a class="lock newsite" href="shop.html" style="margin-left:auto">🛍️ New site</a>
+  <button class="lock" id="salesBtn" style="margin-left:0">📊<span class="lbl-long"> Sales</span></button>
   <button class="lock" id="histBtn" style="margin-left:0">🕘</button>
   <button class="lock" id="lockBtn" style="margin-left:0">🔒</button>
 </div>
@@ -1429,7 +1440,21 @@ document.getElementById('newBtn').addEventListener('click', () => {
   window.scrollTo({ top: 0, behavior: 'smooth' });
 });
 
-addItemRow(false);
+/* ===== hand-off from the shop admin ("Make invoice / label" on a web order) ===== */
+(function takeHandoff() {
+  let h = null;
+  try { h = JSON.parse(localStorage.getItem('faaskids-handoff')); } catch (e) {}
+  localStorage.removeItem('faaskids-handoff');
+  if (!h) { addItemRow(false); return; }
+  document.getElementById('custName').value = h.name || '';
+  document.getElementById('custPhone').value = h.phone || '';
+  document.getElementById('custAddr').value = h.addr || '';
+  document.getElementById('delivery').value = h.delivery || '';
+  document.getElementById('discount').value = h.discount || '';
+  document.getElementById('notes').value = h.notes || '';
+  (h.items || []).forEach(i => addItemRow(false, i));
+  if (!(h.items || []).length) addItemRow(false);
+})();
 render();
 </script>
 </body>
