@@ -92,7 +92,7 @@ function salesRows() {
     ts: o.paidAt || o.ts, total: o.total, channel: 'Website',
     items: o.lines.map(l => ({ key: l.productId, name: l.name, qty: l.qty, amount: l.amount }))
   }));
-  const inv = (invoices || []).map(e => ({
+  const inv = (invoices || []).filter(e => e.paid !== false).map(e => ({ // unpaid invoices aren't sales yet
     ts: e.ts, total: e.total || 0, channel: 'Invoice',
     items: (e.items || []).map(i => ({ key: 'inv:' + i.name, name: i.name, qty: i.qty || 0, amount: i.amount || (i.qty || 0) * (i.price || 0) }))
   }));
