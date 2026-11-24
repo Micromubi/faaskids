@@ -585,9 +585,26 @@
   }
   .item-row .rank { font-family: 'Baloo 2', cursive; font-weight: 800; color: var(--ink-soft); font-size: 14px; width: 20px; flex: 0 0 auto; }
   .item-row .nm { flex: 1; min-width: 0; font-weight: 800; font-size: 14px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .item-row .qty { font-size: 12px; color: var(--ink-soft); font-weight: 700; }
+  .item-row .iq { font-size: 12px; color: var(--ink-soft); font-weight: 700; }
   .item-row .rev { font-family: 'Baloo 2', cursive; font-weight: 800; color: var(--teal); font-size: 14.5px; flex: 0 0 auto; }
   .hist-sync { font-size: 12.5px; font-weight: 700; color: var(--ink-soft); margin-bottom: 8px; }
+  /* paid / unpaid */
+  .paid-toggle { display: flex; align-items: center; gap: 12px; border: 2px solid var(--line); border-radius: 14px; padding: 12px 14px; margin-bottom: 12px; cursor: pointer; font-weight: 800; font-size: 16px; background: #fff; }
+  .paid-toggle input { width: 24px; height: 24px; accent-color: #1f8a5b; flex: 0 0 auto; }
+  .paid-toggle.on { border-color: #1f8a5b; background: #e8f6ee; color: #1f6e49; }
+  .paid-stamp { display: inline-block; margin-top: 4px; border: 3px solid #1f8a5b; color: #1f8a5b; font-family: 'Baloo 2', cursive; font-weight: 800; font-size: 18px; letter-spacing: 3px; padding: 0 10px; border-radius: 8px; transform: rotate(-4deg); }
+  .paid-stamp[hidden] { display: none; }
+  .hist-filter { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 8px; }
+  .hist-filter button { border: 2px solid var(--line); background: #fff; border-radius: 12px; padding: 8px 4px; font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 13px; color: var(--ink-soft); cursor: pointer; }
+  .hist-filter button.on { border-color: var(--ink); color: var(--ink); background: var(--cream); }
+  .hist-filter button small { display: block; font-size: 11.5px; font-weight: 700; }
+  .pay-badge { border: none; border-radius: 999px; padding: 6px 10px; font-family: 'Nunito', sans-serif; font-weight: 800; font-size: 12px; cursor: pointer; flex: 0 0 auto; white-space: nowrap; }
+  .pay-badge.paid { background: #e3f4ea; color: #1f8a5b; }
+  .pay-badge.unpaid { background: var(--yellow-soft); color: #b47410; }
+  .hist-item.is-unpaid { border-color: var(--yellow); }
+  .stat-tile.owed { background: var(--yellow-soft); }
+  .stat-tile.owed .val { color: #b47410; }
+  .sales-note { font-size: 12.5px; font-weight: 700; color: var(--ink-soft); margin: -6px 0 12px; }
   .hist-actions { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 10px; }
   .hist-actions .btn { min-height: 44px; padding: 8px 4px; font-size: 13.5px; white-space: nowrap; }
 
@@ -672,6 +689,7 @@
         <label for="notes">Extra note (optional)</label>
         <textarea id="notes" rows="2" placeholder="e.g. Delivery on Friday"></textarea>
       </div>
+      <label class="paid-toggle" id="paidToggle"><input type="checkbox" id="paidChk"> <span id="paidLbl">Not paid yet — tick when the customer pays</span></label>
       <button class="btn btn-new" id="newBtn">🆕 Start new invoice</button>
     </div>
   </div>
@@ -691,6 +709,7 @@
         <div class="title">INVOICE</div>
         <div id="invNo">FK-000000-001</div>
         <div class="muted" id="invDate"></div>
+        <div class="paid-stamp" id="paidStamp" hidden>PAID</div>
       </div>
     </div>
     <div class="inv-body">
@@ -784,6 +803,7 @@
     <button class="closer" id="histClose">✕</button>
   </div>
   <div class="hist-sync" id="histSync"></div>
+  <div class="hist-filter" id="histFilter"></div>
   <div class="hist-list" id="histList"></div>
   <div class="hist-actions">
     <button class="btn btn-new" id="histBackup">📤 Backup</button>
@@ -820,7 +840,7 @@ const ITEM_TYPES = [
 ];
 const QUICK_PRICES = [14000, 16000, 18000, 25000, 29000];
 
-const fmt = n => '₦' + Number(n || 0).toLocaleString('en-NG');
+const fmt = n => '₦' + Math.round(Number(n || 0)).toLocaleString('en-NG');
 
 /* ===== PIN LOCK ===== */
 const lockscreen = document.getElementById('lockscreen');
@@ -885,6 +905,8 @@ function makeInvoiceNo() {
 let invoiceNo = makeInvoiceNo();
 
 const itemsEl = document.getElementById('items');
+let invoicePaid = false;           // paid / unpaid for the invoice on screen
+const isPaid = e => e.paid !== false; // invoices saved before this feature count as paid
 
 function addItemRow(focus = true, data = null) {
   const card = document.createElement('div');
@@ -1022,6 +1044,11 @@ function render() {
   document.getElementById('invTotals').innerHTML = t;
   document.getElementById('dockTotal').textContent = fmt(total);
 
+  document.getElementById('paidStamp').hidden = !invoicePaid;
+  document.getElementById('paidChk').checked = invoicePaid;
+  document.getElementById('paidToggle').classList.toggle('on', invoicePaid);
+  document.getElementById('paidLbl').textContent = invoicePaid ? 'Paid ✓ — counted in Sales' : 'Not paid yet — tick when the customer pays';
+
   const notes = document.getElementById('notes').value.trim();
   document.getElementById('invNotesBox').style.display = notes ? '' : 'none';
   document.getElementById('invNotes').textContent = notes;
@@ -1037,6 +1064,12 @@ function escapeHtml(s) {
   document.getElementById(id).addEventListener('input', render));
 
 document.getElementById('addItem').addEventListener('click', () => addItemRow());
+document.getElementById('paidChk').addEventListener('change', e => {
+  invoicePaid = e.target.checked;
+  render();
+  // already saved? update it straight away; otherwise it's saved on the next export/send
+  if (!setPaid(invoiceNo, invoicePaid) && invoicePaid) saveToHistory();
+});
 
 /* ===== invoice history (saved on this device) ===== */
 const HIST_KEY = 'faaskids-history';
@@ -1056,7 +1089,10 @@ function saveToHistory() {
     phone: document.getElementById('custPhone').value.trim(),
     addr: document.getElementById('custAddr').value.trim(),
     notes: document.getElementById('notes').value.trim(),
-    delivery, discount, total, items
+    delivery, discount, total, items,
+    paid: invoicePaid,
+    paidAt: invoicePaid ? (getHistory().find(e => e.no === invoiceNo)?.paidAt || Date.now()) : null,
+    updatedAt: Date.now()
   };
   const h = getHistory().filter(e => e.no !== entry.no);
   h.unshift(entry);
@@ -1089,7 +1125,7 @@ function mergeHistories(local, cloud) {
   const map = new Map();
   [...cloud, ...local].forEach(e => {
     const cur = map.get(e.no);
-    if (!cur || (e.ts || 0) > (cur.ts || 0)) map.set(e.no, e);
+    if (!cur || (e.updatedAt || e.ts || 0) > (cur.updatedAt || cur.ts || 0)) map.set(e.no, e);
   });
   return [...map.values()].sort((a, b) => (b.ts || 0) - (a.ts || 0)).slice(0, 200);
 }
@@ -1124,30 +1160,62 @@ function loadFromHistory(no) {
   (s.items || []).forEach(i => addItemRow(false, i));
   if (!s.items || !s.items.length) addItemRow(false);
   invoiceNo = s.no;
+  invoicePaid = isPaid(s);
   render();
   closeHistory();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 }
 
-function renderHistory() {
+function setPaid(no, paid) {
   const h = getHistory();
+  const e = h.find(x => x.no === no);
+  if (!e) return false;
+  e.paid = paid;
+  e.paidAt = paid ? (e.paidAt || Date.now()) : null;
+  e.updatedAt = Date.now();
+  localStorage.setItem(HIST_KEY, JSON.stringify(h));
+  cloudPush(e);
+  return true;
+}
+
+let histFilter = 'all';
+function renderHistory() {
+  const all = getHistory();
   const list = document.getElementById('histList');
+  const unpaid = all.filter(e => !isPaid(e));
+  const paid = all.filter(isPaid);
+  document.getElementById('histFilter').innerHTML = [
+    ['all', 'All', all], ['unpaid', 'Unpaid', unpaid], ['paid', 'Paid', paid]
+  ].map(([k, l, arr]) => `<button data-f="${k}" class="${histFilter === k ? 'on' : ''}">${l} (${arr.length})<small>${fmt(arr.reduce((s, e) => s + (e.total || 0), 0))}</small></button>`).join('');
+  const h = histFilter === 'paid' ? paid : histFilter === 'unpaid' ? unpaid : all;
+  if (!h.length && all.length) {
+    list.innerHTML = `<div class="hist-empty">No ${histFilter} invoices.</div>`;
+    return;
+  }
   if (!h.length) {
     list.innerHTML = '<div class="hist-empty">No saved invoices yet.<br>Invoices are saved here automatically when you export or send them.</div>';
     return;
   }
   list.innerHTML = h.map(e => `
-    <div class="hist-item" data-no="${escapeHtml(e.no)}">
+    <div class="hist-item ${isPaid(e) ? '' : 'is-unpaid'}" data-no="${escapeHtml(e.no)}">
       <div class="info">
         <div class="no">${escapeHtml(e.no)}</div>
         <div class="who">${escapeHtml(e.name || '—')}</div>
         <div class="sub">${new Date(e.ts).toLocaleDateString('en-GB')} · ${(e.items || []).reduce((s, i) => s + i.qty, 0)} item(s)</div>
       </div>
       <div class="amt">${fmt(e.total)}</div>
+      <button class="pay-badge ${isPaid(e) ? 'paid' : 'unpaid'}" title="Tap to change">${isPaid(e) ? '✓ Paid' : 'Unpaid'}</button>
       <button class="del" title="Delete">🗑</button>
     </div>`).join('');
   list.querySelectorAll('.hist-item').forEach(el => {
     el.querySelector('.info').addEventListener('click', () => loadFromHistory(el.dataset.no));
+    el.querySelector('.pay-badge').addEventListener('click', () => {
+      const e = getHistory().find(x => x.no === el.dataset.no);
+      if (!e) return;
+      setPaid(e.no, !isPaid(e));
+      if (e.no === invoiceNo) { invoicePaid = !isPaid(e); render(); }
+      renderHistory();
+    });
     el.querySelector('.del').addEventListener('click', () => {
       if (!confirm(`Delete invoice ${el.dataset.no}?`)) return;
       localStorage.setItem(HIST_KEY, JSON.stringify(getHistory().filter(e => e.no !== el.dataset.no)));
@@ -1169,6 +1237,10 @@ function closeHistory() {
   document.getElementById('histSheet').classList.remove('open');
 }
 document.getElementById('histBtn').addEventListener('click', openHistory);
+document.getElementById('histFilter').addEventListener('click', e => {
+  const b = e.target.closest('[data-f]');
+  if (b) { histFilter = b.dataset.f; renderHistory(); }
+});
 document.getElementById('histClose').addEventListener('click', closeHistory);
 document.getElementById('histOverlay').addEventListener('click', closeHistory);
 
@@ -1234,29 +1306,37 @@ function computeSales(entries) {
 }
 
 function renderSales() {
-  const stats = computeSales(getHistory());
+  const history = getHistory();
+  const stats = computeSales(history.filter(isPaid));
+  const owed = history.filter(e => !isPaid(e));
+  const owedTotal = owed.reduce((s, e) => s + (e.total || 0), 0);
   const content = document.getElementById('salesContent');
+  const owedTile = owed.length ? `
+    <div class="stat-grid" style="grid-template-columns:1fr">
+      <div class="stat-tile owed"><div class="val">${fmt(owedTotal)}</div><div class="lbl">Invoiced, awaiting payment · ${owed.length} invoice${owed.length === 1 ? '' : 's'}</div></div>
+    </div>` : '';
   if (!stats.orders) {
-    content.innerHTML = '<div class="hist-empty">No sales yet.<br>Totals build up here as you export or send invoices.</div>';
+    content.innerHTML = owedTile + '<div class="hist-empty">No paid sales yet.<br>Tick “paid” on an invoice (or in 🕘 history) and it counts here.</div>';
     return;
   }
   const tiles = `
     <div class="stat-grid">
-      <div class="stat-tile"><div class="val">${fmt(stats.totalSales)}</div><div class="lbl">Total Sales</div></div>
+      <div class="stat-tile"><div class="val">${fmt(stats.totalSales)}</div><div class="lbl">Paid Sales</div></div>
       <div class="stat-tile pink"><div class="val">${stats.orders}</div><div class="lbl">Orders</div></div>
       <div class="stat-tile yellow"><div class="val">${stats.unitsSold}</div><div class="lbl">Items Sold</div></div>
     </div>
     <div class="stat-grid" style="grid-template-columns:1fr">
       <div class="stat-tile"><div class="val">${fmt(stats.avgOrder)}</div><div class="lbl">Average Order Value</div></div>
-    </div>`;
+    </div>${owedTile}
+    <div class="sales-note">Only paid invoices count as sales.</div>`;
   const rows = stats.items.map((i, ix) => `
     <div class="item-row">
       <span class="rank">${ix + 1}</span>
       <span class="nm">${escapeHtml(i.name)}</span>
-      <span class="qty">×${i.qty}</span>
+      <span class="iq">×${i.qty}</span>
       <span class="rev">${fmt(i.revenue)}</span>
     </div>`).join('');
-  content.innerHTML = tiles + '<div class="sales-subhead">Items sold, by revenue</div>' + rows;
+  content.innerHTML = tiles + '<div class="sales-subhead">Items sold (paid), by revenue</div>' + rows;
 }
 
 function openSales() {
@@ -1406,7 +1486,7 @@ document.getElementById('waBtn').addEventListener('click', () => {
   if (delivery) msg += `\nDelivery: ${fmt(delivery)}`;
   if (discount) msg += `\nDiscount: −${fmt(discount)}`;
   msg += `\n*TOTAL: ${fmt(total)}*`;
-  msg += `\n\n💳 *Payment*\n${PAY.name}\n${PAY.bank} — ${PAY.number}`;
+  msg += invoicePaid ? `\n\n✅ *PAID* — thank you!` : `\n\n💳 *Payment*\n${PAY.name}\n${PAY.bank} — ${PAY.number}`;
   if (notes) msg += `\n\n${notes}`;
   msg += `\n\nFaasKids 💛 Grow with Style\n📞 0809 111 1750`;
 
@@ -1425,6 +1505,7 @@ document.getElementById('newBtn').addEventListener('click', () => {
   document.getElementById('notes').value = '';
   itemsEl.innerHTML = '';
   invoiceNo = makeInvoiceNo();
+  invoicePaid = false;
   addItemRow(false);
   window.scrollTo({ top: 0, behavior: 'smooth' });
 });
